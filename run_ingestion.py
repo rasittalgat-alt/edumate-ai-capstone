@@ -10,7 +10,7 @@ GEMINI_KEY   = 'YOUR_GEMINI_API_KEY'
 PINECONE_KEY = 'YOUR_PINECONE_API_KEY'
 PINECONE_HOST = 'YOUR_PINECONE_HOST_URL'  # e.g. https://your-index.svc.aped-4627-b74a.pinecone.io
 NAMESPACE    = 'edumate_kb'
-DOCX_PATH    = 'EduMate_RAG_Knowledge_Base.docx'
+DOCX_PATH    = 'data/raw/EduMate_RAG_Knowledge_Base.docx'
 CHUNK_SIZE   = 200   # words per chunk
 CHUNK_OVERLAP = 50   # words overlap between consecutive chunks
 
