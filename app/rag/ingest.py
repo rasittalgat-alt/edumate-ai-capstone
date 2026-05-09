@@ -11,7 +11,7 @@ from app.monitoring.logger import get_logger
 
 logger = get_logger("edumate.ingest")
 
-DOCX_PATH    = "EduMate_RAG_Knowledge_Base.docx"
+DOCX_PATH    = "data/raw/EduMate_RAG_Knowledge_Base.docx"
 CHUNK_SIZE   = 200
 CHUNK_OVERLAP = 50
 
