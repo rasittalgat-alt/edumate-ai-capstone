@@ -1,1 +1,104 @@
-
+{
+  "description": "Raw source topics and sample questions for EduMate knowledge base",
+  "topics": [
+    {
+      "id": "machine_learning",
+      "title": "Machine Learning",
+      "doc_id": "doc-ml-001",
+      "sample_questions": [
+        "What is machine learning?",
+        "Explain supervised vs unsupervised learning",
+        "What is overfitting and how do you prevent it?",
+        "How does gradient descent work?"
+      ]
+    },
+    {
+      "id": "neural_networks",
+      "title": "Neural Networks",
+      "doc_id": "doc-nn-002",
+      "sample_questions": [
+        "What is a neural network?",
+        "Explain backpropagation",
+        "What is the vanishing gradient problem?",
+        "What are CNNs used for?"
+      ]
+    },
+    {
+      "id": "python",
+      "title": "Python Programming",
+      "doc_id": "doc-py-003",
+      "sample_questions": [
+        "What are Python list comprehensions?",
+        "Explain decorators in Python",
+        "What is the difference between a list and a tuple?",
+        "How does Python's GIL work?"
+      ]
+    },
+    {
+      "id": "algorithms",
+      "title": "Algorithms & Data Structures",
+      "doc_id": "doc-alg-004",
+      "sample_questions": [
+        "What is Big O notation?",
+        "Explain quicksort algorithm",
+        "What is a hash table?",
+        "How does binary search work?"
+      ]
+    },
+    {
+      "id": "databases",
+      "title": "Databases: SQL & NoSQL",
+      "doc_id": "doc-db-005",
+      "sample_questions": [
+        "What is the difference between SQL and NoSQL?",
+        "Explain database normalization",
+        "What is an index in a database?",
+        "When should you use MongoDB vs PostgreSQL?"
+      ]
+    },
+    {
+      "id": "llm",
+      "title": "Large Language Models",
+      "doc_id": "doc-llm-006",
+      "sample_questions": [
+        "What is a large language model?",
+        "How does the transformer architecture work?",
+        "What is attention mechanism?",
+        "What is fine-tuning an LLM?"
+      ]
+    },
+    {
+      "id": "prompt_engineering",
+      "title": "Prompt Engineering",
+      "doc_id": "doc-pe-007",
+      "sample_questions": [
+        "What is prompt engineering?",
+        "Explain chain-of-thought prompting",
+        "What is few-shot learning in prompting?",
+        "How do you prevent prompt injection?"
+      ]
+    },
+    {
+      "id": "ai_agents",
+      "title": "AI Agents",
+      "doc_id": "doc-agi-008",
+      "sample_questions": [
+        "What are AI agents?",
+        "How does RAG work in an agent?",
+        "What is the ReAct pattern?",
+        "How do multi-agent systems communicate?"
+      ]
+    },
+    {
+      "id": "data_science",
+      "title": "Data Science",
+      "doc_id": "doc-ds-009",
+      "sample_questions": [
+        "What is exploratory data analysis?",
+        "How do you handle missing values in pandas?",
+        "What is a correlation matrix?",
+        "Explain the data science workflow"
+      ]
+    }
+  ]
+}
