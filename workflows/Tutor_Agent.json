@@ -1,72 +1,98 @@
 {
   "name": "EduMate_Tutor_Agent",
-  "_note": "Requires a Google Gemini credential configured in n8n (Settings > Credentials > Google Gemini). Connect it to the 'Google Gemini Chat Model' node.",
+  "_note": "Requires: (1) Google Gemini credential in n8n. (2) Brave Search MCP server running on port 3100 (see docs/architecture_blueprint.md for setup). Connect Gemini credential to 'Google Gemini Chat Model' node.",
   "nodes": [
     {
+      "parameters": {},
       "id": "ta-01",
       "name": "Input",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [224, 304],
-      "parameters": {}
+      "position": [224, 304]
     },
     {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst q = data.question || '';\nconst mode = data.mode;\nconst sa = data.student_answer || '';\nconst ctx = data.rag_context || '';\n\nlet msg;\nif (mode === 'explain') {\n  msg = 'Topic: ' + q + '\\n\\nKnowledge Base Context:\\n' + ctx + '\\n\\nRespond ONLY with this exact JSON structure (no markdown, no extra text). The quiz array must contain EXACTLY 3 objects:\\n{\"explanation\":\"3-5 sentences describing the topic\",\"example\":\"one concrete practical example\",\"quiz\":[{\"question\":\"first question\",\"answer\":\"first answer\"},{\"question\":\"second question\",\"answer\":\"second answer\"},{\"question\":\"third question\",\"answer\":\"third answer\"}],\"recommendation\":\"what to study next\"}';\n} else if (mode === 'quiz') {\n  msg = 'Topic: ' + q + '\\n\\nKnowledge Base Context:\\n' + ctx + '\\n\\nRespond ONLY with this exact JSON structure (no markdown, no extra text). The quiz array must contain EXACTLY 3 objects:\\n{\"quiz\":[{\"question\":\"first question\",\"answer\":\"first answer\"},{\"question\":\"second question\",\"answer\":\"second answer\"},{\"question\":\"third question\",\"answer\":\"third answer\"}]}';\n} else {\n  msg = 'Original question: ' + q + '\\nStudent answer: ' + sa + '\\n\\nKnowledge Base Context:\\n' + ctx + '\\n\\nRespond ONLY with this exact JSON structure (no markdown, no extra text):\\n{\"correct\":true,\"partial_credit\":false,\"score\":85,\"feedback\":\"detailed feedback for the student\",\"correct_answer\":\"the ideal answer\"}';\n}\n\nreturn [{ json: { ...data, user_message: msg } }];"
+      },
       "id": "ta-02",
       "name": "Build_Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [448, 304],
-      "parameters": {
-        "jsCode": "const data = $input.first().json;\nconst q = data.question || '';\nconst mode = data.mode;\nconst sa = data.student_answer || '';\nconst ctx = data.rag_context || '';\nlet msg;\nif (mode === 'explain') {\n  msg = 'Topic: ' + q + '\\n\\nKnowledge Base Context:\\n' + ctx + '\\n\\nRespond ONLY with this exact JSON (no markdown):\\n{\"explanation\":\"3-5 sentences\",\"example\":\"one concrete example\",\"quiz\":[{\"question\":\"q1\",\"answer\":\"a1\"},{\"question\":\"q2\",\"answer\":\"a2\"},{\"question\":\"q3\",\"answer\":\"a3\"}],\"recommendation\":\"what to study next\"}';\n} else if (mode === 'quiz') {\n  msg = 'Topic: ' + q + '\\n\\nKnowledge Base Context:\\n' + ctx + '\\n\\nRespond ONLY with this exact JSON (no markdown):\\n{\"quiz\":[{\"question\":\"q1\",\"answer\":\"a1\"},{\"question\":\"q2\",\"answer\":\"a2\"},{\"question\":\"q3\",\"answer\":\"a3\"}]}';\n} else {\n  msg = 'Original question: ' + q + '\\nStudent answer: ' + sa + '\\n\\nKnowledge Base Context:\\n' + ctx + '\\n\\nRespond ONLY with this exact JSON (no markdown):\\n{\"correct\":true,\"partial_credit\":false,\"score\":85,\"feedback\":\"detailed feedback\",\"correct_answer\":\"ideal answer\"}';\n}\nreturn [{ json: { ...data, user_message: msg } }];"
-      }
+      "position": [448, 304]
     },
     {
-      "id": "ta-03",
-      "name": "AI Agent",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 1.7,
-      "position": [720, 304],
       "parameters": {
         "agentType": "conversationalAgent",
         "promptType": "define",
         "text": "={{ $json.user_message }}",
         "options": {
-          "systemMessage": "You are EduMate AI, an intelligent educational assistant. Always use the provided knowledge base context. CRITICAL: Output raw JSON only — no markdown fences, no preamble."
+          "systemMessage": "You are EduMate AI, an intelligent educational assistant. You help students learn complex topics through clear explanations, concrete examples, and targeted quizzes. Always use the provided knowledge base context for accurate information. You also have access to a Brave Search tool — use it to find supplementary or up-to-date information when the knowledge base context is insufficient. CRITICAL RULE: Your entire response must be a single valid JSON object only — no markdown code blocks, no ``` fences, no explanation text, no preamble. Output raw JSON only."
         }
-      }
+      },
+      "id": "ta-03",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [720, 304]
     },
     {
-      "id": "ta-04",
-      "name": "Google Gemini Chat Model",
-      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
-      "typeVersion": 1,
-      "position": [720, 520],
       "parameters": {
-        "options": { "temperature": 0.7 }
+        "options": {
+          "temperature": 0.7
+        }
       },
       "credentials": {
         "googlePalmApi": {
           "id": "YOUR_GEMINI_CREDENTIAL_ID",
           "name": "Google Gemini(PaLM) Api account"
         }
-      }
+      },
+      "id": "ta-04",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [720, 520]
     },
     {
+      "parameters": {
+        "endpointUrl": "http://172.17.0.1:3100/mcp",
+        "serverTransport": "httpStreamable",
+        "authentication": "none",
+        "include": "all"
+      },
+      "id": "ta-06",
+      "name": "Brave_Search_MCP",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [720, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "const orig = $node['Input'].json;\nlet llm_output;\ntry {\n  const raw = ($input.first().json.output || '').trim();\n  const cleaned = raw.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/```\\s*$/i, '').trim();\n  llm_output = JSON.parse(cleaned);\n} catch (e) {\n  llm_output = { error: 'Failed to parse LLM response', raw: $input.first().json.output };\n}\nreturn [{ json: { ...orig, llm_output } }];"
+      },
       "id": "ta-05",
       "name": "Parse_Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [980, 304],
-      "parameters": {
-        "jsCode": "const orig = $node['Input'].json;\nlet llm_output;\ntry {\n  const raw = ($input.first().json.output || '').trim();\n  const cleaned = raw.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/```\\s*$/i, '').trim();\n  llm_output = JSON.parse(cleaned);\n} catch (e) {\n  llm_output = { error: 'Failed to parse LLM response', raw: $input.first().json.output };\n}\nreturn [{ json: { ...orig, llm_output } }];"
-      }
+      "position": [980, 304]
     }
   ],
   "connections": {
-    "Input":      { "main": [[{ "node": "Build_Prompt",  "type": "main", "index": 0 }]] },
-    "Build_Prompt": { "main": [[{ "node": "AI Agent",    "type": "main", "index": 0 }]] },
-    "Google Gemini Chat Model": { "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]] },
-    "AI Agent":   { "main": [[{ "node": "Parse_Output",  "type": "main", "index": 0 }]] }
+    "Input": {
+      "main": [[{"node": "Build_Prompt", "type": "main", "index": 0}]]
+    },
+    "Build_Prompt": {
+      "main": [[{"node": "AI Agent", "type": "main", "index": 0}]]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [[{"node": "AI Agent", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Brave_Search_MCP": {
+      "ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]
+    },
+    "AI Agent": {
+      "main": [[{"node": "Parse_Output", "type": "main", "index": 0}]]
+    }
   },
   "settings": {
     "executionOrder": "v1",
