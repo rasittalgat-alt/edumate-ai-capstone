@@ -59,13 +59,14 @@ User / Browser (index.html)
 | Format_RAG_Context | Builds `rag_context` string + `sources[]`; fallback if no matches |
 
 ### Tutor Agent — EduMate_Tutor_Agent
-**Role:** Generates a structured LLM response using RAG context.
+**Role:** Generates a structured LLM response using RAG context, with Brave Search available via MCP for supplementary web lookups.
 
 | Node | Action |
 |---|---|
 | Build_Prompt | Constructs mode-specific prompt with injected RAG context |
 | AI Agent (LangChain) | System prompt enforces raw JSON output only |
 | Google Gemini Chat Model | `gemini-2.0-flash`, temperature 0.7 |
+| Brave_Search_MCP | MCP Client Tool v1.2 — HTTP Streamable transport to `http://172.17.0.1:3100/mcp` |
 | Parse_Output | Strips markdown fences, parses JSON; fallback on error |
 
 **Output schema by mode:**
@@ -141,11 +142,46 @@ EduMate_RAG_Knowledge_Base.docx
 | Embedding | Gemini Embedding-001 (768-dim) | Same provider, consistent latency |
 | Vector DB | Pinecone | Managed, serverless, instant RAG |
 | Progress | Google Sheets | Human-readable, zero infrastructure |
+| External Search | Brave Search via MCP protocol | Real-time web context when KB is insufficient; satisfies MCP requirement |
+| MCP Transport | supergateway (HTTP Streamable) | Wraps stdio MCP server as HTTP endpoint for n8n |
 | Ingestion | Python (`run_ingestion.py`, `app/rag/`) | One-time batch script |
 
 ---
 
-## 6. Safety Layer
+## 6. MCP Integration
+
+The Tutor Agent connects to an external Brave Search MCP server via n8n's **MCP Client Tool** node (v1.2, HTTP Streamable transport). This enables the AI agent to perform live web searches when the RAG knowledge base is insufficient.
+
+```
+Tutor Agent (AI Agent node)
+        │
+        ▼ ai_tool connection
+Brave_Search_MCP node
+  endpointUrl: http://172.17.0.1:3100/mcp
+  transport:   httpStreamable
+        │
+        ▼ Docker bridge (172.17.0.1)
+VPS Host Machine
+  supergateway v3.4.3  (port 3100)
+    --outputTransport streamableHttp /mcp
+        │
+        ▼ stdio
+  @modelcontextprotocol/server-brave-search
+    BRAVE_API_KEY=...
+```
+
+**Setup (on VPS / host):**
+```bash
+npm install -g supergateway @modelcontextprotocol/server-brave-search pm2
+BRAVE_API_KEY=your_key pm2 start supergateway --name mcp-brave -- \
+  --port 3100 --stdio "npx -y @modelcontextprotocol/server-brave-search" \
+  --outputTransport streamableHttp --cors
+pm2 save
+```
+
+---
+
+## 7. Safety Layer
 
 The `Safety_Check` node in the Orchestrator blocks requests before any LLM call:
 
@@ -159,13 +195,13 @@ All blocked requests return `{ status: "rejected", error, message }` with HTTP 4
 
 ---
 
-## 7. Inter-Agent Communication
+## 8. Inter-Agent Communication
 
 n8n's `executeWorkflow` node passes the **full accumulated JSON** to each child workflow. Each agent receives all upstream fields and extends them with new fields (`spread pattern: { ...data, newField }`). This ensures `topic`, `running_score`, `rag_context`, and `llm_output` are available at every stage.
 
 ---
 
-## 8. Frontend (index.html)
+## 9. Frontend (index.html)
 
 - **Modes:** Explain, Quiz, Evaluate
 - **Languages:** English, Russian, Kazakh (switched in real time)
@@ -175,7 +211,7 @@ n8n's `executeWorkflow` node passes the **full accumulated JSON** to each child 
 
 ---
 
-## 9. Observability
+## 10. Observability
 
 | Source | What it shows |
 |---|---|
@@ -185,7 +221,7 @@ n8n's `executeWorkflow` node passes the **full accumulated JSON** to each child 
 
 ---
 
-## 10. Deployment
+## 11. Deployment
 
 - **n8n:** Docker, self-hosted at `n8n.sheshimai.cloud` (VPS, Let's Encrypt via Traefik)
 - **Frontend:** Static HTML — served locally or on any static host

@@ -48,8 +48,9 @@ EduMate_AI_Orchestrator
 | LLM | Google Gemini Flash (`gemini-2.0-flash`) |
 | Embedding | Google Gemini Embedding-001 (768-dim) |
 | Vector Database | Pinecone (namespace: `edumate_kb`) |
-| Knowledge Base | `EduMate_RAG_Knowledge_Base.docx` → chunked (200w / 50w overlap) |
+| Knowledge Base | `data/raw/EduMate_RAG_Knowledge_Base.docx` → chunked (200w / 50w overlap) |
 | Progress Tracking | Google Sheets |
+| External Search (MCP) | Brave Search via MCP protocol (supergateway on VPS) |
 | Ingestion Script | Python (`run_ingestion.py`) |
 
 ---
@@ -120,6 +121,31 @@ PINECONE_HOST = 'YOUR_PINECONE_HOST_URL'
 | `PINECONE_HOST` | Content Agent, Ingestion |
 | Google Sheets OAuth2 | Progress Agent |
 | `SPREADSHEET_ID` | Progress Agent — Append_To_Sheets node |
+| `BRAVE_API_KEY` | Tutor Agent — Brave Search MCP tool |
+
+---
+
+## MCP Setup (Brave Search)
+
+The Tutor Agent uses Brave Search via the MCP protocol for supplementary web search. To run this locally or on a VPS:
+
+```bash
+# Install dependencies (once)
+npm install -g supergateway @modelcontextprotocol/server-brave-search pm2
+
+# Start the MCP server (persisted with pm2)
+BRAVE_API_KEY=your_key pm2 start supergateway \
+  --name mcp-brave -- \
+  --port 3100 \
+  --stdio "npx -y @modelcontextprotocol/server-brave-search" \
+  --outputTransport streamableHttp \
+  --cors
+
+pm2 save  # persist across reboots
+```
+
+The MCP endpoint will be available at `http://localhost:3100/mcp`.
+In the Tutor Agent JSON (`workflows/Tutor_Agent.json`), the `endpointUrl` is set to `http://172.17.0.1:3100/mcp` — the Docker bridge gateway IP that lets n8n reach the host machine. Adjust if your setup differs.
 
 ---
 
@@ -150,22 +176,32 @@ See `tests/` for all 6 test scenarios.
 
 ```
 edumate-ai-capstone/
-├── index.html                        # Frontend UI (EN / RU / KK)
-├── run_ingestion.py                  # KB ingestion script
-├── EduMate_RAG_Knowledge_Base.docx   # Source knowledge base (9 topics)
-├── architecture_blueprint.md         # Detailed architecture documentation
-├── workflows/
-│   ├── edumate_ai_orchestrator.json  # Orchestrator workflow
-│   ├── Content_Agent.json            # RAG retrieval agent
-│   ├── Tutor_Agent.json              # LLM response agent
-│   └── Progress_Agent.json           # Google Sheets logging agent
-└── tests/
-    ├── positive_explain.json
-    ├── positive_quiz.json
-    ├── positive_evaluate.json
-    ├── negative_empty_question.json
-    ├── negative_unknown_topic.json
-    └── adversarial_prompt_injection.json
+├── index.html              # Frontend UI (EN / RU / KK)
+├── run_ingestion.py        # KB ingestion entry point
+├── requirements.txt
+├── .env.example
+├── app/                    # Python library (config, safety, RAG, monitoring)
+├── data/
+│   ├── raw/
+│   │   ├── EduMate_RAG_Knowledge_Base.docx  # Source knowledge base (9 topics)
+│   │   └── data.json       # Topic metadata
+│   └── processed/
+│       └── chunks.json     # 36 chunked vectors (output of parse+chunk step)
+├── docs/
+│   ├── architecture_blueprint.md
+│   └── executive_summary.md
+├── tests/                  # 6 test payload JSONs
+│   ├── positive_explain.json
+│   ├── positive_quiz.json
+│   ├── positive_evaluate.json
+│   ├── negative_empty_question.json
+│   ├── negative_unknown_topic.json
+│   └── adversarial_prompt_injection.json
+└── workflows/              # 4 n8n workflow JSONs
+    ├── edumate_ai_orchestrator.json  # Orchestrator
+    ├── Content_Agent.json            # RAG retrieval agent
+    ├── Tutor_Agent.json              # LLM + MCP response agent
+    └── Progress_Agent.json           # Google Sheets logging agent
 ```
 
 ---
@@ -178,8 +214,10 @@ edumate-ai-capstone/
 | Multi-agent architecture | ✅ Orchestrator + Content + Tutor + Progress |
 | At least 3 agents | ✅ Content, Tutor, Progress |
 | RAG pipeline | ✅ DOCX → Gemini Embedding → Pinecone → LLM |
-| External tool integration | ✅ Google Sheets via Progress Agent |
+| MCP integration | ✅ Brave Search via MCP protocol in Tutor Agent |
+| External tool integration | ✅ Google Sheets (Progress Agent) + Brave Search MCP (Tutor Agent) |
 | Inter-agent communication | ✅ n8n Execute Workflow |
+| Safety layer | ✅ 8 injection patterns blocked before LLM |
 | Testability | ✅ explain / quiz / evaluate + safety cases |
 | Observability | ✅ n8n execution logs + Google Sheets |
 | Real-world use case | ✅ AI learning companion |

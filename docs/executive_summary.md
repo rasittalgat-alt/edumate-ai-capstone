@@ -39,6 +39,7 @@ The frontend (`index.html`) is a zero-dependency single-page app supporting Engl
 | Embedding | Gemini Embedding-001 | Same API provider, 768-dim, consistent quality |
 | Vector DB | Pinecone | Managed, serverless, instant semantic search |
 | Knowledge Base | DOCX → chunked (200w/50w overlap) | ~36 vectors for better RAG precision than 9 flat docs |
+| MCP tool | Brave Search via supergateway | Real-time web search in Tutor Agent when KB is insufficient; explicit MCP protocol |
 | Progress | Google Sheets | Human-readable, shareable, zero infrastructure |
 | Frontend | Vanilla HTML/JS | No build step, works offline, 3-language UI |
 
@@ -52,7 +53,8 @@ The frontend (`index.html`) is a zero-dependency single-page app supporting Engl
 | Multi-agent architecture | ✅ Orchestrator + 3 specialized agents |
 | At least 3 agents | ✅ Content, Tutor, Progress |
 | RAG pipeline | ✅ DOCX → Gemini Embedding → Pinecone → LLM |
-| External tool integration | ✅ Google Sheets via Progress Agent |
+| MCP integration | ✅ Brave Search MCP tool in Tutor Agent (HTTP Streamable, supergateway on VPS) |
+| External tool integration | ✅ Google Sheets (Progress Agent) + Brave Search MCP (Tutor Agent) |
 | Inter-agent communication | ✅ n8n Execute Workflow (full JSON propagation) |
 | Safety layer | ✅ Prompt injection detection, mode validation, empty-input rejection |
 | Testability | ✅ 6 test payloads: positive, negative, adversarial |
