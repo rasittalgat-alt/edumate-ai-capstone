@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs and temp files
+n8n_logs.txt
+create_workflows_output.txt
+post_workflows_result.txt
+orchestrator_id.txt
+exec_*.json
+wf_*.json
+wf_nodes.json
+wf_payload.json
+wf_update*.json
+
+# Secrets — never commit these
+*.key
+secrets.json
+
+# OS
+.DS_Store
+Thumbs.db

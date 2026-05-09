@@ -1,0 +1,7 @@
+{
+  "question": "What is overfitting in machine learning?",
+  "mode": "evaluate",
+  "student_answer": "Overfitting is when a model performs very well on training data but poorly on new, unseen data because it memorized the training examples instead of learning general patterns.",
+  "topic": "Machine Learning",
+  "running_score": 85
+}

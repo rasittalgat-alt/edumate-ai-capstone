@@ -1,0 +1,91 @@
+{
+  "name": "EduMate_Content_Agent",
+  "_note": "Replace YOUR_GEMINI_API_KEY and YOUR_PINECONE_API_KEY with real values. Replace YOUR_PINECONE_HOST with your Pinecone index host URL.",
+  "nodes": [
+    {
+      "id": "ca-01",
+      "name": "Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [220, 300],
+      "parameters": {}
+    },
+    {
+      "id": "ca-02",
+      "name": "Prepare_Embed_Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nreturn [{ json: { ...data, embed_text: data.question } }];\n"
+      }
+    },
+    {
+      "id": "ca-03",
+      "name": "Call_Gemini_Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=YOUR_GEMINI_API_KEY",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({content:{parts:[{text:$json.embed_text}]},outputDimensionality:768}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "ca-04",
+      "name": "Prepare_Pinecone_Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300],
+      "parameters": {
+        "jsCode": "const orig = $node['Input'].json;\nconst vector = $input.first().json.embedding.values;\nreturn [{ json: { ...orig, query_vector: vector } }];\n"
+      }
+    },
+    {
+      "id": "ca-05",
+      "name": "Query_Pinecone",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR_PINECONE_HOST/query",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({vector:$json.query_vector,topK:3,includeMetadata:true,namespace:\"edumate_kb\"}) }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Api-Key", "value": "YOUR_PINECONE_API_KEY" }]
+        }
+      }
+    },
+    {
+      "id": "ca-06",
+      "name": "Format_RAG_Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 300],
+      "parameters": {
+        "jsCode": "const orig = $node['Input'].json;\nconst matches = $input.first().json.matches || [];\nlet rag_context = '';\nconst sources = [];\nif (matches.length === 0) {\n  rag_context = 'Educational material on ' + (orig.question || 'this topic') + '. Focus on foundational concepts and practical applications.';\n  sources.push('Course Curriculum', 'Academic Reference Library');\n} else {\n  const contexts = [];\n  matches.forEach(function(m, i) {\n    if (m.metadata && m.metadata.text) {\n      contexts.push('Source ' + (i + 1) + ': ' + (m.metadata.title || 'Reference') + '\\n' + m.metadata.text);\n      const srcs = Array.isArray(m.metadata.sources) ? m.metadata.sources : (m.metadata.sources ? [m.metadata.sources] : []);\n      srcs.forEach(function(s) { if (!sources.includes(s)) sources.push(s); });\n    }\n  });\n  rag_context = contexts.join('\\n\\n');\n}\nreturn [{ json: { ...orig, rag_context, sources } }];\n"
+      }
+    }
+  ],
+  "connections": {
+    "Input":                  { "main": [[{ "node": "Prepare_Embed_Request",  "type": "main", "index": 0 }]] },
+    "Prepare_Embed_Request":  { "main": [[{ "node": "Call_Gemini_Embedding",  "type": "main", "index": 0 }]] },
+    "Call_Gemini_Embedding":  { "main": [[{ "node": "Prepare_Pinecone_Query", "type": "main", "index": 0 }]] },
+    "Prepare_Pinecone_Query": { "main": [[{ "node": "Query_Pinecone",         "type": "main", "index": 0 }]] },
+    "Query_Pinecone":         { "main": [[{ "node": "Format_RAG_Context",     "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

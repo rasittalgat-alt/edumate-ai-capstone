@@ -1,0 +1,99 @@
+{
+  "name": "EduMate_Progress_Agent",
+  "_note": "Requires Google Sheets OAuth2 credential in n8n. Replace YOUR_SPREADSHEET_ID with your Google Sheets document ID.",
+  "nodes": [
+    {
+      "id": "pa-01",
+      "name": "Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [224, 304],
+      "parameters": {}
+    },
+    {
+      "id": "pa-04",
+      "name": "Prepare_Progress",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [448, 304],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst llm = data.llm_output || {};\nconst mode = data.mode;\nlet evaluation_result = '', score = '', overall_score = '';\nif (mode === 'evaluate') {\n  evaluation_result = llm.correct ? 'correct' : (llm.partial_credit ? 'partial' : 'incorrect');\n  score = llm.score !== undefined ? String(llm.score) : '';\n  const running = typeof data.running_score === 'number' ? data.running_score : 0;\n  overall_score = String(running + (llm.score || 0));\n}\nconst topic = data.topic || '';\nreturn [{ json: {\n  trace_id: data.trace_id,\n  question: data.question,\n  mode,\n  student_answer: data.student_answer || '',\n  timestamp: new Date().toISOString(),\n  evaluation_result,\n  score,\n  topic,\n  overall_score\n}}];"
+      }
+    },
+    {
+      "id": "pa-02",
+      "name": "Append_To_Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [672, 304],
+      "continueOnFail": true,
+      "parameters": {
+        "operation": "append",
+        "resource": "sheet",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Progress"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $json.timestamp }}",
+            "trace_id": "={{ $json.trace_id }}",
+            "question": "={{ $json.question }}",
+            "mode": "={{ $json.mode }}",
+            "student_answer": "={{ $json.student_answer }}",
+            "evaluation_result": "={{ $json.evaluation_result }}",
+            "score": "={{ $json.score }}",
+            "topic": "={{ $json.topic }}",
+            "overall_score": "={{ $json.overall_score }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "timestamp",         "displayName": "timestamp",         "type": "string" },
+            { "id": "trace_id",          "displayName": "trace_id",          "type": "string" },
+            { "id": "question",          "displayName": "question",          "type": "string" },
+            { "id": "mode",              "displayName": "mode",              "type": "string" },
+            { "id": "student_answer",    "displayName": "student_answer",    "type": "string" },
+            { "id": "evaluation_result", "displayName": "evaluation_result", "type": "string" },
+            { "id": "score",             "displayName": "score",             "type": "string" },
+            { "id": "topic",             "displayName": "topic",             "type": "string" },
+            { "id": "overall_score",     "displayName": "overall_score",     "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GSHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "pa-03",
+      "name": "Return_Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [896, 304],
+      "parameters": {
+        "jsCode": "const orig = $node['Input'].json;\nconst hasError = !!($input.first().json.error);\nreturn [{ json: { ...orig, progress_saved: !hasError } }];\n"
+      }
+    }
+  ],
+  "connections": {
+    "Input":           { "main": [[{ "node": "Prepare_Progress", "type": "main", "index": 0 }]] },
+    "Prepare_Progress":{ "main": [[{ "node": "Append_To_Sheets", "type": "main", "index": 0 }]] },
+    "Append_To_Sheets":{ "main": [[{ "node": "Return_Status",    "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

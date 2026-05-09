@@ -1,393 +1,185 @@
-# EduMate AI Capstone
+# EduMate — AI Learning Companion
 
-## Multi-Agent Learning Companion Powered by n8n
-
-EduMate AI is a capstone GenAI project that demonstrates an end-to-end multi-agent learning assistant. The system helps students understand educational materials, generate practice quizzes, evaluate answers, and track learning progress.
-
-The project combines:
-
-- Multi-agent orchestration with **n8n**
-- Retrieval-Augmented Generation over educational materials
-- External tool integration through MCP-compatible services
-- Progress tracking in Google Sheets
-- LLM behavior tests for positive, negative, and adversarial scenarios
-- Observability, safety, and documentation for a complete capstone submission
+EduMate is a multi-agent AI system that helps students learn through interactive explanations, quizzes, and instant answer evaluation. Built on n8n, Gemini, and Pinecone.
 
 ---
 
-## 1. Project Goal
+## Architecture
 
-The goal of EduMate AI is to create a practical AI learning companion that supports students during independent study.
-
-The assistant can:
-
-1. Retrieve relevant learning content from a domain-specific knowledge base.
-2. Explain concepts in simple language.
-3. Generate personalized quiz questions.
-4. Evaluate student answers and provide feedback.
-5. Save progress data for review and follow-up learning.
-
----
-
-## 2. Problem Statement
-
-Students often struggle to understand learning materials when information is spread across textbooks, notes, PDFs, and digital files. They also lack immediate feedback when studying alone.
-
-Teachers and mentors may need a lightweight assistant that can help explain topics, generate practice questions, and track student progress without manually preparing every interaction.
-
-EduMate AI addresses this problem with a multi-agent GenAI workflow that combines educational retrieval, explanation, assessment, and progress tracking.
-
----
-
-## 3. Core Use Case
-
-A student asks a question about a learning topic.
-
-Example:
-
-```text
-Explain what an algorithm is in simple words.
 ```
-
-The system then:
-
-1. Validates the request.
-2. Retrieves relevant educational content using RAG.
-3. Generates a grounded explanation.
-4. Creates a short quiz.
-5. Evaluates the student's answer.
-6. Saves progress to Google Sheets.
-7. Returns a final response with feedback and sources.
-
----
-
-## 4. Architecture Summary
-
-```text
-Student / User Interface
-        |
-        v
-n8n Webhook / Chat Trigger
-        |
-        v
-Input Validation & Safety Layer
-        |
-        v
-n8n Orchestrator Workflow
-        |
-        +--> Content Agent --> RAG Service --> Vector Database
-        |
-        +--> Tutor Agent
-        |
-        +--> Quiz Agent
-        |
-        +--> Progress Agent --> MCP / Google Sheets
-        |
-        v
-Final Response
+User / Browser (index.html)
+        │
+        ▼  POST /webhook/edumate-ai
+EduMate_AI_Orchestrator
+  ├─ Parse_Input       — extract question, mode, topic, running_score
+  ├─ Safety_Check      — reject empty, invalid mode, or injections
+  ├─ IF_Safe
+  │    ├─ [safe]  ──▶ Execute_Content_Agent
+  │    │                    ▼
+  │    │           Gemini Embedding-001
+  │    │                    ▼
+  │    │           Pinecone (namespace: edumate_kb)
+  │    │                    ▼
+  │    │           Format_RAG_Context
+  │    │                    ▼
+  │    │          Execute_Tutor_Agent
+  │    │                    ▼
+  │    │           Build_Prompt → Gemini Flash LLM
+  │    │                    ▼
+  │    │           Parse_Output (structured JSON)
+  │    │                    ▼
+  │    │          Execute_Progress_Agent
+  │    │                    ▼
+  │    │           Google Sheets (EduMate_Progress)
+  │    │                    ▼
+  │    │          Build_Final_Response → HTTP 200
+  │    │
+  │    └─ [unsafe] ──▶ Build_Rejection → HTTP 400
 ```
 
 ---
 
-## 5. Agent Roles
-
-### Content Agent
-
-Retrieves relevant educational context from the RAG knowledge base.
-
-### Tutor Agent
-
-Generates a clear, student-friendly explanation based on retrieved content.
-
-### Quiz Agent
-
-Generates practice questions and evaluates student answers.
-
-### Progress Agent
-
-Stores learning outcomes, quiz score, weak areas, and recommendations.
-
-### Safety Layer
-
-Validates input, detects harmful or adversarial prompts, and prevents unsafe or unsupported responses.
-
----
-
-## 6. Technology Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Orchestration | n8n |
-| RAG API | Python + FastAPI |
-| Vector Database | ChromaDB |
-| LLM | OpenAI / Gemini / Ollama-compatible model |
-| Embeddings | OpenAI embeddings / local embedding model |
-| External Integration | MCP-compatible Google Sheets integration |
-| Testing | Pytest |
-| Observability | n8n execution logs, structured logs, optional Langfuse |
-| Version Control | GitHub |
+| Frontend | Vanilla HTML/CSS/JS (`index.html`) |
+| Orchestration | n8n (self-hosted) |
+| LLM | Google Gemini Flash (`gemini-2.0-flash`) |
+| Embedding | Google Gemini Embedding-001 (768-dim) |
+| Vector Database | Pinecone (namespace: `edumate_kb`) |
+| Knowledge Base | `EduMate_RAG_Knowledge_Base.docx` → chunked (200w / 50w overlap) |
+| Progress Tracking | Google Sheets |
+| Ingestion Script | Python (`run_ingestion.py`) |
 
 ---
 
-## 7. Repository Structure
+## Supported Modes
 
-```text
+| Mode | Description | Required fields |
+|---|---|---|
+| `explain` | RAG-grounded topic explanation + 3 quiz questions | `question`, `mode` |
+| `quiz` | Generate 3 quiz questions on a topic | `question`, `mode`, `topic` |
+| `evaluate` | Score a student's answer (0–100) with feedback | `question`, `mode`, `student_answer`, `topic`, `running_score` |
+
+### Topics (9)
+Machine Learning · Neural Networks · Python · Algorithms & Data Structures · Databases · Large Language Models · Prompt Engineering · AI Agents · Data Science
+
+---
+
+## How to Run the Frontend
+
+Just open `index.html` in a browser — no build step needed.
+
+The frontend points to the live n8n webhook. To run against your own n8n instance, update the `API_URL` constant at the top of the `<script>` section in `index.html`.
+
+---
+
+## Ingestion (Populate Knowledge Base)
+
+Prerequisites: Python 3.9+, `python-docx` package
+
+```bash
+pip install python-docx
+python run_ingestion.py
+```
+
+This reads `EduMate_RAG_Knowledge_Base.docx`, chunks each topic into 200-word segments with 50-word overlap, embeds them via Gemini, and upserts to Pinecone (~36 vectors total).
+
+**Set your credentials in `run_ingestion.py`:**
+```python
+GEMINI_KEY    = 'YOUR_GEMINI_API_KEY'
+PINECONE_KEY  = 'YOUR_PINECONE_API_KEY'
+PINECONE_HOST = 'YOUR_PINECONE_HOST_URL'
+```
+
+---
+
+## Importing Workflows into n8n
+
+1. In n8n: **Workflows → Import from File**
+2. Import in this order:
+   - `workflows/Content_Agent.json`
+   - `workflows/Tutor_Agent.json`
+   - `workflows/Progress_Agent.json`
+   - `workflows/edumate_ai_orchestrator.json`
+3. In the Orchestrator, update the `workflowId` in each **Execute Workflow** node with the IDs assigned after import.
+4. Configure credentials:
+   - **Google Gemini**: Settings → Credentials → Add → Google Gemini (PaLM) → paste API key
+   - **Google Sheets OAuth2**: Settings → Credentials → Add → Google Sheets OAuth2 → authorize
+5. Activate all 4 workflows.
+
+---
+
+## Required Credentials
+
+| Secret | Where used |
+|---|---|
+| `GEMINI_API_KEY` | Content Agent (embedding), Tutor Agent (LLM), Ingestion |
+| `PINECONE_API_KEY` | Content Agent (vector query), Ingestion |
+| `PINECONE_HOST` | Content Agent, Ingestion |
+| Google Sheets OAuth2 | Progress Agent |
+| `SPREADSHEET_ID` | Progress Agent — Append_To_Sheets node |
+
+---
+
+## Test the API
+
+```bash
+# Explain mode
+curl -X POST https://n8n.sheshimai.cloud/webhook/edumate-ai \
+  -H "Content-Type: application/json" \
+  -d @tests/positive_explain.json
+
+# Evaluate mode
+curl -X POST https://n8n.sheshimai.cloud/webhook/edumate-ai \
+  -H "Content-Type: application/json" \
+  -d @tests/positive_evaluate.json
+
+# Safety test (should return HTTP 400)
+curl -X POST https://n8n.sheshimai.cloud/webhook/edumate-ai \
+  -H "Content-Type: application/json" \
+  -d @tests/adversarial_prompt_injection.json
+```
+
+See `tests/` for all 6 test scenarios.
+
+---
+
+## Project Structure
+
+```
 edumate-ai-capstone/
-├── README.md
-├── .env.example
-├── docs/
-│   ├── architecture_blueprint.md
-│   ├── executive_summary.md
-│   ├── self_review.md
-│   └── demo_script.md
+├── index.html                        # Frontend UI (EN / RU / KK)
+├── run_ingestion.py                  # KB ingestion script
+├── EduMate_RAG_Knowledge_Base.docx   # Source knowledge base (9 topics)
+├── architecture_blueprint.md         # Detailed architecture documentation
 ├── workflows/
-│   └── edumate_ai_orchestrator.json
-├── app/
-│   ├── main.py
-│   ├── rag/
-│   │   ├── ingest.py
-│   │   ├── retriever.py
-│   │   └── vector_store.py
-│   ├── safety/
-│   │   ├── validation.py
-│   │   └── guardrails.py
-│   ├── monitoring/
-│   │   └── logger.py
-│   └── config.py
-├── data/
-│   ├── raw/
-│   └── processed/
-├── tests/
-│   ├── test_positive_flow.py
-│   ├── test_negative_cases.py
-│   ├── test_adversarial_prompts.py
-│   └── test_rag_quality.py
-└── requirements.txt
+│   ├── edumate_ai_orchestrator.json  # Orchestrator workflow
+│   ├── Content_Agent.json            # RAG retrieval agent
+│   ├── Tutor_Agent.json              # LLM response agent
+│   └── Progress_Agent.json           # Google Sheets logging agent
+└── tests/
+    ├── positive_explain.json
+    ├── positive_quiz.json
+    ├── positive_evaluate.json
+    ├── negative_empty_question.json
+    ├── negative_unknown_topic.json
+    └── adversarial_prompt_injection.json
 ```
 
 ---
 
-## 8. Setup Instructions
+## Capstone Requirements Coverage
 
-### 8.1 Clone the Repository
-
-```bash
-git clone https://github.com/rasittalgat-alt/edumate-ai-capstone.git
-cd edumate-ai-capstone
-```
-
-### 8.2 Create Virtual Environment
-
-```bash
-python -m venv .venv
-```
-
-Windows:
-
-```bash
-.venv\Scripts\activate
-```
-
-macOS / Linux:
-
-```bash
-source .venv/bin/activate
-```
-
-### 8.3 Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 8.4 Configure Environment Variables
-
-Create a `.env` file based on `.env.example`.
-
-```env
-RAG_SERVICE_URL=http://localhost:8000
-LLM_PROVIDER=
-OPENAI_API_KEY=
-GOOGLE_SHEETS_ID=
-LANGFUSE_PUBLIC_KEY=
-LANGFUSE_SECRET_KEY=
-LANGFUSE_HOST=
-```
-
-Do not commit real credentials to GitHub.
-
-### 8.5 Run RAG Service
-
-```bash
-uvicorn app.main:app --reload
-```
-
-### 8.6 Import n8n Workflow
-
-Import the workflow file from:
-
-```text
-workflows/edumate_ai_orchestrator.json
-```
-
-Then configure credentials and environment variables in n8n.
-
----
-
-## 9. Example API Request
-
-```json
-{
-  "student_id": "student_001",
-  "student_level": "beginner",
-  "subject": "Computer Science",
-  "topic": "Algorithms",
-  "mode": "explain",
-  "question": "What is an algorithm?",
-  "student_answer": null
-}
-```
-
----
-
-## 10. Example System Response
-
-```json
-{
-  "trace_id": "edumate-2026-001",
-  "status": "success",
-  "mode": "explain",
-  "answer": {
-    "explanation": "An algorithm is a clear set of steps used to solve a problem.",
-    "example": "A recipe is a simple example of an algorithm.",
-    "sources": [
-      {
-        "source": "grade7_computer_science_notes.md",
-        "section": "Algorithms"
-      }
-    ]
-  },
-  "quiz": [
-    {
-      "question_id": "q1",
-      "question": "What is an algorithm in your own words?"
-    }
-  ],
-  "progress": {
-    "saved": true,
-    "recommendation": "Practice identifying algorithms in daily life."
-  }
-}
-```
-
----
-
-## 11. Testing
-
-The project includes automated and manual tests for LLM behavior validation.
-
-### Test Categories
-
-- Positive user flow
-- RAG retrieval quality
-- Negative edge cases
-- Adversarial prompt handling
-- Progress tracking failure handling
-
-### Run Tests
-
-```bash
-pytest tests/
-```
-
----
-
-## 12. Demo Plan
-
-The 2-5 minute demo should show:
-
-1. Project problem and goal.
-2. n8n workflow architecture.
-3. Live learning question.
-4. RAG-based explanation with sources.
-5. Quiz generation and answer evaluation.
-6. Progress saved to Google Sheets.
-7. Positive and negative test execution.
-8. Short code self-review.
-
----
-
-## 13. Key Design Decisions
-
-### Why n8n?
-
-n8n provides visual workflow orchestration, API integrations, execution logs, and clear demonstration of agent collaboration.
-
-### Why RAG?
-
-RAG grounds the assistant's answers in educational materials and reduces hallucination risk.
-
-### Why Google Sheets?
-
-Google Sheets is simple, transparent, and easy to demonstrate as a progress tracker.
-
-### Why separate RAG service?
-
-A separate FastAPI RAG service keeps retrieval logic modular and makes the system easier to test and maintain.
-
----
-
-## 14. Known Limitations
-
-- MVP may cover only a limited number of subjects.
-- Quiz evaluation is not a replacement for human grading.
-- RAG quality depends on document preparation.
-- External API and MCP failures may affect progress tracking.
-- The system requires careful prompt design to reduce hallucinations.
-
----
-
-## 15. Future Improvements
-
-- Teacher dashboard
-- Multi-language support
-- Adaptive difficulty
-- Long-term learning memory
-- LMS integration
-- Better RAG evaluation dataset
-- Voice interface
-- Student document upload support
-
----
-
-## 16. Deliverables Checklist
-
-- [ ] Architecture Blueprint
-- [ ] Executive Summary
-- [ ] README
-- [ ] Code Repository
-- [ ] n8n Workflow Export
-- [ ] RAG Service
-- [ ] Test Suite
-- [ ] Self-Review
-- [ ] Demo Script
-- [ ] Video Demo Link
-- [ ] Submission `.txt` file
-
----
-
-## 17. Submission File Format
-
-The final submission file should be named:
-
-```text
-Capstone_project_[your_name]_[your_last_name].txt
-```
-
-The file should contain:
-
-```text
-[your]@epam.com
-https://github.com/rasittalgat-alt/edumate-ai-capstone
-[video demo link]
-```
+| Requirement | Status |
+|---|---|
+| Working Application | ✅ Live at sheshimai.cloud |
+| Multi-agent architecture | ✅ Orchestrator + Content + Tutor + Progress |
+| At least 3 agents | ✅ Content, Tutor, Progress |
+| RAG pipeline | ✅ DOCX → Gemini Embedding → Pinecone → LLM |
+| External tool integration | ✅ Google Sheets via Progress Agent |
+| Inter-agent communication | ✅ n8n Execute Workflow |
+| Testability | ✅ explain / quiz / evaluate + safety cases |
+| Observability | ✅ n8n execution logs + Google Sheets |
+| Real-world use case | ✅ AI learning companion |

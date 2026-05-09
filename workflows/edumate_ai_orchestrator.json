@@ -1,0 +1,147 @@
+{
+  "name": "EduMate_AI_Orchestrator",
+  "_note": "After import: update workflowId in Execute_Content_Agent, Execute_Tutor_Agent, Execute_Progress_Agent to match your imported workflow IDs.",
+  "nodes": [
+    {
+      "id": "orch-01",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "edumate-ai-webhook",
+      "position": [220, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "edumate-ai",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "orch-02",
+      "name": "Parse_Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst trace_id = body.trace_id || ('trace-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9));\nreturn [{ json: {\n  trace_id,\n  question: (body.question || '').trim(),\n  mode: (body.mode || '').toLowerCase().trim(),\n  student_answer: (body.student_answer || body.answer || '').trim(),\n  topic: (body.topic || '').trim(),\n  running_score: (typeof body.running_score === 'number') ? body.running_score : 0\n}}];\n"
+      }
+    },
+    {
+      "id": "orch-03",
+      "name": "Safety_Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst { question, mode } = data;\nconst validModes = ['explain', 'quiz', 'evaluate'];\nconst injectionPatterns = [\n  'ignore previous instructions', 'reveal system prompt',\n  'do not use sources', 'change my score', 'bypass safety',\n  'ignore all instructions', 'disregard previous', 'jailbreak'\n];\nconst q = (question || '').toLowerCase();\nif (!question && mode !== 'evaluate') {\n  return [{ json: { ...data, safe: false, error_type: 'empty_question' } }];\n}\nif (!validModes.includes(mode)) {\n  return [{ json: { ...data, safe: false, error_type: 'invalid_mode' } }];\n}\nconst injectionFound = injectionPatterns.some(function(p) { return q.includes(p); });\nif (injectionFound) {\n  return [{ json: { ...data, safe: false, error_type: 'injection_attempt' } }];\n}\nreturn [{ json: { ...data, safe: true } }];\n"
+      }
+    },
+    {
+      "id": "orch-04",
+      "name": "IF_Safe",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-safe",
+              "leftValue": "={{ $json.safe }}",
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "orch-05",
+      "name": "Build_Rejection",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 520],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst messages = {\n  empty_question: 'Question cannot be empty.',\n  invalid_mode: 'Invalid mode. Supported: explain, quiz, evaluate.',\n  injection_attempt: 'Request blocked by safety filter.'\n};\nreturn [{ json: {\n  trace_id: data.trace_id,\n  status: 'rejected',\n  error: data.error_type,\n  message: messages[data.error_type] || 'Request rejected.'\n}}];\n"
+      }
+    },
+    {
+      "id": "orch-06",
+      "name": "Respond_Rejected",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1100, 520],
+      "parameters": { "options": { "responseCode": 400 } }
+    },
+    {
+      "id": "orch-07",
+      "name": "Execute_Content_Agent",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1100, 300],
+      "parameters": {
+        "source": "database",
+        "workflowId": "CONTENT_AGENT_WORKFLOW_ID",
+        "options": {}
+      }
+    },
+    {
+      "id": "orch-08",
+      "name": "Execute_Tutor_Agent",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1320, 300],
+      "parameters": {
+        "source": "database",
+        "workflowId": "TUTOR_AGENT_WORKFLOW_ID",
+        "options": {}
+      }
+    },
+    {
+      "id": "orch-09",
+      "name": "Execute_Progress_Agent",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1540, 300],
+      "parameters": {
+        "source": "database",
+        "workflowId": "PROGRESS_AGENT_WORKFLOW_ID",
+        "options": {}
+      }
+    },
+    {
+      "id": "orch-10",
+      "name": "Build_Final_Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, 300],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst llm = data.llm_output || {};\nconst mode = data.mode;\nconst sources = data.sources || [];\nconst response = { trace_id: data.trace_id, status: 'success', mode, progress: { saved: !!data.progress_saved } };\nif (mode === 'explain') {\n  response.answer = { explanation: llm.explanation || '', example: llm.example || '', sources };\n  response.quiz = llm.quiz || [];\n  response.recommendation = llm.recommendation || '';\n} else if (mode === 'quiz') {\n  response.quiz = llm.quiz || [];\n  response.answer = { sources };\n  response.recommendation = '';\n} else if (mode === 'evaluate') {\n  response.evaluation = { correct: llm.correct || false, partial_credit: llm.partial_credit || false, score: llm.score || 0, feedback: llm.feedback || '', correct_answer: llm.correct_answer || '' };\n  response.answer = { sources };\n  response.recommendation = llm.recommendation || '';\n}\nreturn [{ json: response }];\n"
+      }
+    },
+    {
+      "id": "orch-11",
+      "name": "Respond_Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1980, 300],
+      "parameters": { "options": { "responseCode": 200 } }
+    }
+  ],
+  "connections": {
+    "Webhook":               { "main": [[{ "node": "Parse_Input",            "type": "main", "index": 0 }]] },
+    "Parse_Input":           { "main": [[{ "node": "Safety_Check",           "type": "main", "index": 0 }]] },
+    "Safety_Check":          { "main": [[{ "node": "IF_Safe",                "type": "main", "index": 0 }]] },
+    "IF_Safe":               { "main": [[{ "node": "Execute_Content_Agent",  "type": "main", "index": 0 }], [{ "node": "Build_Rejection", "type": "main", "index": 0 }]] },
+    "Build_Rejection":       { "main": [[{ "node": "Respond_Rejected",       "type": "main", "index": 0 }]] },
+    "Execute_Content_Agent": { "main": [[{ "node": "Execute_Tutor_Agent",    "type": "main", "index": 0 }]] },
+    "Execute_Tutor_Agent":   { "main": [[{ "node": "Execute_Progress_Agent", "type": "main", "index": 0 }]] },
+    "Execute_Progress_Agent":{ "main": [[{ "node": "Build_Final_Response",   "type": "main", "index": 0 }]] },
+    "Build_Final_Response":  { "main": [[{ "node": "Respond_Success",        "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

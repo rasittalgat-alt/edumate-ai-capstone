@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduMate AI — Learning Companion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2563EB;
+      --secondary: #0EA5E9;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --bg: #EFF6FF;
+      --text: #1E293B;
+      --muted: #64748B;
+      --border: #E2E8F0;
+      --shadow: 0 4px 24px rgba(37,99,235,0.1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1D4ED8 0%, #0EA5E9 100%);
+      color: white; padding: 44px 20px 38px; text-align: center; position: relative; overflow: hidden;
+    }
+    header::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse at 25% 50%, rgba(255,255,255,0.07) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%);
+    }
+    header::after {
+      content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
+      height: 38px; background: var(--bg); clip-path: ellipse(55% 100% at 50% 100%);
+    }
+    .logo { font-size: 2.7rem; font-weight: 800; letter-spacing: -1.5px; position: relative; }
+    .logo em { font-style: normal; background: linear-gradient(135deg,#BAE6FD,#93C5FD); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .tagline { margin-top: 8px; font-size: 0.9rem; opacity: 0.72; position: relative; }
+
+    /* ── Container ── */
+    .container { max-width: 760px; margin: 0 auto; padding: 36px 20px 60px; }
+
+    /* ── Tabs ── */
+    .tabs { display: grid; grid-template-columns: repeat(3,1fr); background: white; border-radius: 18px; padding: 6px; box-shadow: var(--shadow); margin-bottom: 24px; gap: 4px; }
+    .tab { padding: 13px 10px; border: none; border-radius: 13px; cursor: pointer; font-family: 'Inter',sans-serif; font-size: 0.875rem; font-weight: 600; transition: all 0.22s; background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 7px; }
+    .tab.active { background: linear-gradient(135deg,var(--primary),var(--secondary)); color: white; box-shadow: 0 4px 14px rgba(37,99,235,0.32); }
+    .tab:hover:not(.active) { background: var(--bg); color: var(--text); }
+
+    /* ── Card ── */
+    .card { background: white; border-radius: 20px; padding: 28px; box-shadow: var(--shadow); }
+    .card + .card { margin-top: 20px; }
+
+    /* ── Buttons ── */
+    .btn { display: flex; align-items: center; justify-content: center; gap: 8px; border: none; border-radius: 13px; cursor: pointer; font-family: 'Inter',sans-serif; font-weight: 700; transition: all 0.2s; }
+    .btn-primary { width: 100%; padding: 16px; background: linear-gradient(135deg,var(--primary),var(--secondary)); color: white; font-size: 0.975rem; margin-top: 18px; }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(37,99,235,0.38); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-outline { padding: 11px 22px; background: transparent; border: 2px solid var(--primary); color: var(--primary); font-size: 0.875rem; }
+    .btn-outline:hover { background: #DBEAFE; }
+    .btn-success { padding: 14px 28px; background: linear-gradient(135deg,var(--success),#059669); color: white; font-size: 0.95rem; }
+    .btn-success:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16,185,129,0.35); }
+    .btn-ghost { padding: 8px 16px; background: transparent; border: 1.5px solid var(--border); color: var(--muted); font-size: 0.8rem; border-radius: 10px; }
+    .btn-ghost:hover { border-color: var(--primary); color: var(--primary); background: #DBEAFE; }
+
+    /* ── Spinner (inline) ── */
+    .spinner { width: 19px; height: 19px; border: 2.5px solid rgba(255,255,255,0.35); border-top-color: white; border-radius: 50%; animation: spin 0.75s linear infinite; display: none; }
+    .spinner.on { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error ── */
+    .error-box { background: #FEF2F2; border: 1.5px solid #FECACA; border-radius: 14px; padding: 14px 18px; color: #991B1B; font-size: 0.88rem; line-height: 1.6; display: none; margin-bottom: 16px; gap: 10px; align-items: flex-start; }
+    .error-box.on { display: flex; }
+
+    /* ── Response sections (shared) ── */
+    .sec { margin-bottom: 22px; }
+    .sec:last-child { margin-bottom: 0; }
+    .sec-title { font-size: 0.71rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--primary); margin-bottom: 11px; display: flex; align-items: center; gap: 8px; }
+    .sec-title::after { content: ''; flex: 1; height: 1.5px; background: var(--border); border-radius: 2px; }
+    .explain-text { font-size: 1rem; line-height: 1.8; }
+    .example-box { background: linear-gradient(135deg,#F0FDF4,#ECFDF5); border-left: 4px solid var(--success); border-radius: 0 13px 13px 0; padding: 16px 20px; font-size: 0.92rem; line-height: 1.75; color: #064E3B; }
+    .sources { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { background: #DBEAFE; color: var(--primary); padding: 5px 13px; border-radius: 20px; font-size: 0.775rem; font-weight: 500; border: 1px solid #BFDBFE; }
+    .rec-box { display: flex; gap: 14px; align-items: flex-start; background: linear-gradient(135deg,#EFF6FF,#E0F2FE); border-radius: 13px; padding: 16px 20px; font-size: 0.92rem; line-height: 1.75; color: #1E3A8A; }
+
+    /* ═══ TOPIC GRID (shared) ═══ */
+    .topic-intro { text-align: center; margin-bottom: 22px; }
+    .topic-intro h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; }
+    .topic-intro p  { font-size: 0.88rem; color: var(--muted); }
+    .topic-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(190px,1fr)); gap: 12px; }
+    .topic-card { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 16px; border-radius: 16px; cursor: pointer; border: 2px solid var(--border); background: white; transition: all 0.22s; font-family: 'Inter',sans-serif; position: relative; overflow: hidden; }
+    .topic-card:hover { border-color: var(--primary); box-shadow: 0 4px 16px rgba(37,99,235,0.15); transform: translateY(-2px); }
+    .topic-card .t-icon { font-size: 2rem; }
+    .topic-card .t-name { font-size: 0.875rem; font-weight: 700; color: var(--text); text-align: center; }
+    .topic-card .t-sub  { font-size: 0.75rem; color: var(--muted); text-align: center; }
+    .topic-card .t-score-badge { position: absolute; top: 8px; right: 8px; background: var(--success); color: white; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+
+    /* ═══ EXPLAIN CHAT ═══ */
+    .chat-panel { background: white; border-radius: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; }
+
+    .chat-header { display: flex; align-items: center; gap: 12px; padding: 20px 24px; border-bottom: 1.5px solid var(--border); }
+    .chat-topic-info { display: flex; align-items: center; gap: 8px; flex: 1; }
+    .chat-topic-icon { font-size: 1.5rem; }
+    .chat-topic-label { font-size: 1rem; font-weight: 700; }
+    .chat-back-btn { padding: 7px 14px; background: transparent; border: 1.5px solid var(--border); border-radius: 10px; color: var(--muted); font-family: 'Inter',sans-serif; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.18s; white-space: nowrap; }
+    .chat-back-btn:hover { border-color: var(--primary); color: var(--primary); background: #DBEAFE; }
+
+    .chat-messages { padding: 20px 24px; display: flex; flex-direction: column; gap: 18px; min-height: 120px; }
+
+    .msg-user { align-self: flex-end; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 12px 18px; border-radius: 18px 18px 4px 18px; max-width: 82%; font-size: 0.95rem; line-height: 1.55; word-break: break-word; }
+
+    .msg-ai { align-self: stretch; }
+    .ai-bubble { background: #F8FAFF; border: 1.5px solid #DBEAFE; border-radius: 4px 18px 18px 18px; padding: 20px 22px; }
+
+    .msg-loading { align-self: flex-start; }
+    .typing-dots { display: flex; gap: 5px; align-items: center; background: #F8FAFF; border: 1.5px solid #DBEAFE; border-radius: 4px 18px 18px 18px; padding: 14px 18px; }
+    .typing-dots span { width: 7px; height: 7px; background: var(--primary); border-radius: 50%; display: block; animation: dot-bounce 1.1s infinite; opacity: 0.6; }
+    .typing-dots span:nth-child(2) { animation-delay: 0.18s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.36s; }
+    @keyframes dot-bounce { 0%,60%,100% { transform: translateY(0); opacity: 0.6; } 30% { transform: translateY(-7px); opacity: 1; } }
+
+    .chat-input-bar { display: flex; gap: 10px; align-items: flex-end; padding: 16px 20px 20px; border-top: 1.5px solid var(--border); }
+    .chat-input-bar textarea { flex: 1; border: 2px solid var(--border); border-radius: 13px; padding: 12px 16px; font-family: 'Inter',sans-serif; font-size: 0.95rem; color: var(--text); resize: none; outline: none; background: #FAFBFC; transition: border-color 0.2s, box-shadow 0.2s; line-height: 1.5; max-height: 140px; }
+    .chat-input-bar textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37,99,235,0.09); background: white; }
+    .chat-input-bar textarea::placeholder { color: #B0B8C8; }
+    .chat-send-btn { padding: 12px 18px; background: linear-gradient(135deg,var(--primary),var(--secondary)); color: white; border: none; border-radius: 13px; cursor: pointer; font-family: 'Inter',sans-serif; font-weight: 700; font-size: 0.88rem; display: flex; align-items: center; gap: 6px; flex-shrink: 0; transition: all 0.2s; height: 48px; }
+    .chat-send-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.35); }
+    .chat-send-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+    .chat-send-spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.35); border-top-color: white; border-radius: 50%; animation: spin 0.75s linear infinite; display: none; }
+    .chat-send-spinner.on { display: block; }
+
+    /* Big loading (quiz) */
+    .quiz-loading { text-align: center; padding: 48px 20px; }
+    .quiz-loading .big-spinner { width: 48px; height: 48px; border: 4px solid #DBEAFE; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    .quiz-loading p { color: var(--muted); font-size: 0.9rem; }
+    .quiz-loading strong { display: block; font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+
+    /* ── Score ring ── */
+    .score-wrap { display: flex; align-items: center; gap: 20px; padding: 20px 24px; border-radius: 16px; background: linear-gradient(135deg,#F8FAFF,#EFF6FF); border: 1.5px solid #BFDBFE; }
+    .score-ring { width: 80px; height: 80px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 1.75rem; font-weight: 800; flex-shrink: 0; border: 5px solid; line-height: 1; }
+    .score-ring .pts { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; }
+    .score-ring.high { border-color: var(--success); color: var(--success); background: #D1FAE5; }
+    .score-ring.mid  { border-color: var(--warning); color: var(--warning); background: #FEF3C7; }
+    .score-ring.low  { border-color: var(--danger);  color: var(--danger);  background: #FEE2E2; }
+    .score-verdict { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+    .score-sub { font-size: 0.84rem; color: var(--muted); }
+    .feedback-box { background: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: 13px; padding: 15px 18px; font-size: 0.91rem; line-height: 1.75; color: #78350F; }
+    .correct-box  { background: #F0F9FF; border: 1.5px solid #BAE6FD; border-radius: 13px; padding: 15px 18px; font-size: 0.91rem; line-height: 1.75; color: #0C4A6E; }
+
+    /* ═══ QUIZ ═══ */
+    .q-progress { margin-bottom: 22px; }
+    .q-progress-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .q-progress-label { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+    .q-score-label { font-size: 0.8rem; font-weight: 700; color: var(--primary); }
+    .progress-bar { height: 6px; background: #DBEAFE; border-radius: 10px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg,var(--primary),var(--secondary)); border-radius: 10px; transition: width 0.5s ease; }
+    .q-badge { display: inline-flex; align-items: center; gap: 6px; background: #DBEAFE; color: var(--primary); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; margin-bottom: 14px; }
+    .q-text { font-size: 1.05rem; font-weight: 600; line-height: 1.65; margin-bottom: 18px; }
+    .label { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px; }
+    textarea { width: 100%; border: 2px solid var(--border); border-radius: 13px; padding: 14px 16px; font-family: 'Inter',sans-serif; font-size: 1rem; color: var(--text); resize: vertical; outline: none; background: #FAFBFC; transition: border-color 0.2s, box-shadow 0.2s; line-height: 1.65; }
+    textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37,99,235,0.09); background: white; }
+    textarea::placeholder { color: #B0B8C8; }
+    .q-hint { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
+    .q-result-actions { display: flex; justify-content: flex-end; margin-top: 20px; }
+
+    .summary-score { text-align: center; padding: 28px 20px 20px; }
+    .summary-ring { width: 110px; height: 110px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 800; margin: 0 auto 16px; border: 6px solid; line-height: 1; }
+    .summary-ring .pts { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+    .summary-ring.high { border-color: var(--success); color: var(--success); background: #D1FAE5; }
+    .summary-ring.mid  { border-color: var(--warning); color: var(--warning); background: #FEF3C7; }
+    .summary-ring.low  { border-color: var(--danger);  color: var(--danger);  background: #FEE2E2; }
+    .summary-title { font-size: 1.25rem; font-weight: 800; margin-bottom: 4px; }
+    .summary-sub { font-size: 0.88rem; color: var(--muted); }
+    .summary-breakdown { margin-top: 20px; }
+    .bd-item { border: 1.5px solid var(--border); border-radius: 13px; padding: 14px 16px; margin-bottom: 10px; }
+    .bd-item.pass { border-color: #6EE7B7; background: #F0FDF4; }
+    .bd-item.mid  { border-color: #FCD34D; background: #FFFBEB; }
+    .bd-item.fail { border-color: #FCA5A5; background: #FEF2F2; }
+    .bd-q { font-size: 0.88rem; font-weight: 600; margin-bottom: 6px; }
+    .bd-meta { display: flex; justify-content: space-between; align-items: center; }
+    .bd-score { font-size: 0.8rem; font-weight: 700; }
+    .bd-score.high { color: var(--success); }
+    .bd-score.mid  { color: var(--warning); }
+    .bd-score.low  { color: var(--danger); }
+    .bd-ans { font-size: 0.78rem; color: var(--muted); margin-top: 4px; font-style: italic; }
+    .summary-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .summary-actions .btn-outline { flex: 1; min-width: 140px; }
+    .summary-actions .btn-success { flex: 1; min-width: 140px; }
+
+    /* ═══ PROGRESS ═══ */
+    .prog-empty { text-align: center; padding: 48px 20px; }
+    .prog-empty .empty-icon { font-size: 3.5rem; margin-bottom: 16px; }
+    .prog-empty h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+    .prog-empty p { font-size: 0.88rem; color: var(--muted); max-width: 320px; margin: 0 auto 20px; line-height: 1.6; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
+    .stat-card { background: white; border-radius: 16px; padding: 18px 14px; text-align: center; box-shadow: var(--shadow); }
+    .stat-num { font-size: 1.6rem; font-weight: 800; color: var(--primary); line-height: 1; margin-bottom: 5px; }
+    .stat-label { font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .prog-section-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .prog-section-title::after { content: ''; flex: 1; height: 1.5px; background: var(--border); }
+    .prog-topic-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 12px; margin-bottom: 28px; }
+    .prog-topic-card { background: white; border-radius: 16px; padding: 18px 16px; box-shadow: var(--shadow); border: 2px solid transparent; transition: all 0.2s; }
+    .prog-topic-card.done { border-color: #BFDBFE; }
+    .prog-topic-card.done:hover { border-color: var(--primary); transform: translateY(-1px); }
+    .prog-topic-card.untried { opacity: 0.5; }
+    .ptc-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .ptc-icon { font-size: 1.5rem; }
+    .ptc-name { font-size: 0.875rem; font-weight: 700; }
+    .ptc-bar-wrap { margin-bottom: 8px; }
+    .ptc-bar { height: 5px; background: #DBEAFE; border-radius: 10px; overflow: hidden; }
+    .ptc-bar-fill { height: 100%; border-radius: 10px; transition: width 0.6s ease; background: linear-gradient(90deg,var(--primary),var(--secondary)); }
+    .ptc-bar-fill.high { background: linear-gradient(90deg,var(--success),#059669); }
+    .ptc-bar-fill.mid  { background: linear-gradient(90deg,var(--warning),#D97706); }
+    .ptc-bar-fill.low  { background: linear-gradient(90deg,var(--danger),#DC2626); }
+    .ptc-meta { display: flex; justify-content: space-between; align-items: center; }
+    .ptc-score { font-size: 0.82rem; font-weight: 700; }
+    .ptc-score.high { color: var(--success); }
+    .ptc-score.mid  { color: var(--warning); }
+    .ptc-score.low  { color: var(--danger); }
+    .ptc-attempts { font-size: 0.75rem; color: var(--muted); }
+    .ptc-untried { font-size: 0.78rem; color: var(--muted); text-align: center; margin-top: 4px; }
+    .ptc-quiz-btn { margin-top: 10px; width: 100%; padding: 7px; background: #DBEAFE; border: none; border-radius: 9px; color: var(--primary); font-family: 'Inter',sans-serif; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background 0.18s; }
+    .ptc-quiz-btn:hover { background: #BFDBFE; }
+    .prog-history { background: white; border-radius: 20px; padding: 24px; box-shadow: var(--shadow); }
+    .hist-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .hist-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .hist-icon { font-size: 1.4rem; flex-shrink: 0; }
+    .hist-info { flex: 1; }
+    .hist-topic { font-size: 0.9rem; font-weight: 700; }
+    .hist-date  { font-size: 0.77rem; color: var(--muted); margin-top: 2px; }
+    .hist-score { font-size: 0.88rem; font-weight: 700; white-space: nowrap; }
+    .hist-score.high { color: var(--success); }
+    .hist-score.mid  { color: var(--warning); }
+    .hist-score.low  { color: var(--danger); }
+    .hist-clear { display: flex; justify-content: flex-end; margin-top: 14px; }
+
+    /* ── Animations ── */
+    .fade-in { animation: fadeIn 0.35s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+    footer { text-align: center; padding: 0 20px 40px; color: #94A3B8; font-size: 0.79rem; }
+
+    /* ── Language switcher ── */
+    .lang-switcher { position: absolute; top: 16px; right: 20px; display: flex; gap: 4px; z-index: 2; }
+    .lang-btn { padding: 5px 13px; border-radius: 20px; border: 1.5px solid rgba(255,255,255,0.35); background: transparent; color: rgba(255,255,255,0.8); font-family: 'Inter',sans-serif; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.18s; }
+    .lang-btn.active { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.75); color: white; }
+    .lang-btn:hover:not(.active) { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.55); color: white; }
+
+    @media (max-width: 580px) {
+      header { display: flex; flex-direction: column; align-items: center; padding: 16px 20px 38px; }
+      .lang-switcher { position: static; align-self: flex-end; margin-bottom: 10px; }
+      .logo { font-size: 2rem; }
+      .container { padding: 24px 14px 48px; }
+      .card { padding: 20px 16px; }
+      .tab { font-size: 0.8rem; padding: 11px 6px; }
+      .topic-grid, .prog-topic-grid { grid-template-columns: repeat(2,1fr); }
+      .stats-grid { grid-template-columns: repeat(2,1fr); }
+      .score-wrap { flex-direction: column; text-align: center; }
+      .summary-actions { flex-direction: column; }
+      .chat-header { padding: 16px 18px; }
+      .chat-messages { padding: 16px 18px; }
+      .chat-input-bar { padding: 12px 14px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="lang-switcher">
+    <button class="lang-btn active" id="langEn" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" id="langKk" onclick="setLang('kk')">ҚАЗ</button>
+  </div>
+  <div class="logo">Edu<em>Mate</em> AI</div>
+  <div class="tagline" data-i18n="tagline">Your intelligent learning companion</div>
+</header>
+
+<div class="container">
+
+  <div class="tabs">
+    <button class="tab active" data-mode="explain" onclick="switchMode('explain')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      <span data-i18n="tabExplain">Explain</span>
+    </button>
+    <button class="tab" data-mode="quiz" onclick="switchMode('quiz')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span data-i18n="tabQuiz">Quiz</span>
+    </button>
+    <button class="tab" data-mode="progress" onclick="switchMode('progress')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span data-i18n="tabProgress">Progress</span>
+    </button>
+  </div>
+
+  <div class="error-box" id="errorBox">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span id="errorText"></span>
+  </div>
+
+  <!-- ═══════════ EXPLAIN ═══════════ -->
+  <div id="panelExplain">
+
+    <!-- Topic selection -->
+    <div id="explainTopics" class="card">
+      <div class="topic-intro">
+        <h3 data-i18n="explainIntroH">What would you like to learn?</h3>
+        <p data-i18n="explainIntroP">Choose a topic and chat with EduMate about it</p>
+      </div>
+      <div class="topic-grid" id="explainTopicGrid"></div>
+    </div>
+
+    <!-- Chat interface -->
+    <div id="explainChat" class="chat-panel" style="display:none">
+      <div class="chat-header">
+        <button class="chat-back-btn" onclick="resetExplain()" data-i18n="backTopics">← Topics</button>
+        <div class="chat-topic-info">
+          <span class="chat-topic-icon" id="chatTopicIcon"></span>
+          <span class="chat-topic-label" id="chatTopicLabel"></span>
+        </div>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-bar">
+        <textarea id="chatInput" rows="2" data-i18n="chatPlaceholder" placeholder="Ask a question about this topic…"></textarea>
+        <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">
+          <span id="chatSendText" data-i18n="send">Send</span>
+          <div class="chat-send-spinner" id="chatSendSpinner"></div>
+          <svg id="chatSendIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════ QUIZ ═══════════ -->
+  <div id="panelQuiz" style="display:none">
+
+    <div id="quizTopics" class="card">
+      <div class="topic-intro">
+        <h3 data-i18n="quizIntroH">Choose a topic to test your knowledge</h3>
+        <p data-i18n="quizIntroP">EduMate generates questions and evaluates your answers in real time</p>
+      </div>
+      <div class="topic-grid" id="topicGrid"></div>
+    </div>
+
+    <div id="quizLoading" class="card" style="display:none">
+      <div class="quiz-loading">
+        <div class="big-spinner"></div>
+        <strong id="quizLoadingTopic">Loading quiz…</strong>
+        <p data-i18n="loadingQuiz">Searching knowledge base and generating questions</p>
+      </div>
+    </div>
+
+    <div id="quizQuestion" class="card" style="display:none">
+      <div class="q-progress">
+        <div class="q-progress-top">
+          <span class="q-progress-label" id="qProgressLabel">Question 1 of 3</span>
+          <span class="q-score-label" id="qScoreLabel">Score: 0 pts</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="qProgressFill" style="width:0%"></div></div>
+      </div>
+      <div class="q-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="qTopicBadge"></span>
+      </div>
+      <p class="q-text" id="qText"></p>
+      <label class="label" for="qAnswer" data-i18n="yourAnswer">Your answer</label>
+      <textarea id="qAnswer" rows="3" data-i18n="answerPlaceholder" placeholder="Write your answer here… partial answers get partial credit."></textarea>
+      <p class="q-hint" data-i18n="hint">Tip: you don't need to be perfect. EduMate grades leniently and gives helpful feedback.</p>
+      <button class="btn btn-primary" id="qSubmitBtn" onclick="submitAnswer()">
+        <span id="qSubmitText" data-i18n="checkAnswer">Check My Answer</span>
+        <div class="spinner" id="qSpinner"></div>
+      </button>
+    </div>
+
+    <div id="quizQResult" class="card" style="display:none">
+      <div id="qResultContent"></div>
+      <div class="q-result-actions">
+        <button class="btn btn-success" id="qNextBtn" onclick="nextQuestion()">
+          <span id="qNextText">Next Question →</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="quizSummary" class="card" style="display:none">
+      <div class="summary-score">
+        <div class="summary-ring" id="summaryRing">
+          <span id="summaryScoreNum">0</span>
+          <span class="pts">/ 300</span>
+        </div>
+        <div class="summary-title" id="summaryTitle"></div>
+        <div class="summary-sub" id="summarySub"></div>
+      </div>
+      <div class="summary-breakdown" id="summaryBreakdown"></div>
+      <div class="summary-actions">
+        <button class="btn btn-outline" onclick="resetQuiz()" data-i18n="chooseAnotherTopic">← Choose another topic</button>
+        <button class="btn btn-success" onclick="switchMode('progress')" data-i18n="viewProgress">View Progress →</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════ PROGRESS ═══════════ -->
+  <div id="panelProgress" style="display:none"></div>
+
+</div>
+
+<footer>
+  EduMate AI v2 &nbsp;·&nbsp; Multi-agent RAG system &nbsp;·&nbsp;
+  <kbd style="background:#E2E8F0;padding:1px 6px;border-radius:5px;font-size:0.75rem">Ctrl+Enter</kbd> to submit
+</footer>
+
+<script>
+const API = 'https://n8n.sheshimai.cloud/webhook/edumate-ai';
+const LS_KEY = 'edumate_progress_v2';
+
+// ════════ LOCALISATION ════════
+let LANG = 'en';
+
+const I18N = {
+  en: {
+    tagline: 'Your intelligent learning companion',
+    tabExplain: 'Explain', tabQuiz: 'Quiz', tabProgress: 'Progress',
+    explainIntroH: 'What would you like to learn?',
+    explainIntroP: 'Choose a topic and chat with EduMate about it',
+    quizIntroH: 'Choose a topic to test your knowledge',
+    quizIntroP: 'EduMate generates questions and evaluates your answers in real time',
+    backTopics: '← Topics',
+    chatPlaceholder: 'Ask a question about this topic…',
+    send: 'Send',
+    yourAnswer: 'Your answer',
+    answerPlaceholder: 'Write your answer here… partial answers get partial credit.',
+    hint: "Tip: you don't need to be perfect. EduMate grades leniently and gives helpful feedback.",
+    checkAnswer: 'Check My Answer',
+    nextQ: 'Next Question →', seeResults: 'See Results →',
+    loadingQuiz: 'Searching knowledge base and generating questions',
+    chooseAnotherTopic: '← Choose another topic', viewProgress: 'View Progress →',
+    noHistory: 'No quiz history yet',
+    noHistorySub: 'Complete a quiz on any topic and your results will appear here automatically.',
+    startQuizBtn: 'Start a Quiz →',
+    topicsExplored: 'Topics explored', quizzesTaken: 'Quizzes taken',
+    avgScore: 'Avg score', bestScore: 'Best score',
+    topicsSection: '📚 Topics', recentQuizzes: '🕐 Recent Quizzes',
+    clearHistory: 'Clear history', notTried: 'Not tried yet',
+    startQuizSmall: 'Start Quiz →', retry: 'Retry →',
+    attempt: 'attempt', attempts: 'attempts',
+    verdictHigh: '✅ Great answer!', verdictMid: '⚡ Partially correct', verdictLow: '❌ Needs improvement',
+    summaryHigh: 'Excellent work! 🎉', summaryMid: 'Good effort! 💪', summaryLow: 'Keep practicing! 📚',
+    clearConfirm: 'Clear all quiz history?',
+    yourAnswerPrefix: 'Your answer:',
+    runningLabel: 'Running:',
+    secExplanation: '📖 Explanation',
+    secExample: '💡 Example',
+    secSources: '📚 Sources',
+    secUpNext: '🚀 Up Next',
+    secFeedback: '💬 Feedback',
+    secModelAnswer: '✅ Model Answer',
+    questionOf: (i, tot) => `Question ${i} of ${tot}`,
+    scoreLabel: (pts) => `Score: ${pts} pts`,
+    loadingTopic: (lbl) => `Loading ${lbl} quiz…`,
+    runningScore: (pts) => `Running: ${pts} pts`,
+  },
+  kk: {
+    tagline: 'Сіздің оқудағы ақылды жолдасыңыз',
+    tabExplain: 'Түсіндіру', tabQuiz: 'Тест', tabProgress: 'Үлгерім',
+    explainIntroH: 'Не үйренгіңіз келеді?',
+    explainIntroP: 'Тақырыпты таңдап, EduMate-пен сөйлесіңіз',
+    quizIntroH: 'Білімді тексеру үшін тақырыпты таңдаңыз',
+    quizIntroP: 'EduMate сұрақтар жасайды және жауаптарыңызды нақты уақытта бағалайды',
+    backTopics: '← Тақырыптар',
+    chatPlaceholder: 'Осы тақырып бойынша сұрақ қойыңыз…',
+    send: 'Жіберу',
+    yourAnswer: 'Сіздің жауабыңыз',
+    answerPlaceholder: 'Жауабыңызды жазыңыз… толық емес жауаптар да бағаланады.',
+    hint: 'Кеңес: жауаптың тура дәл болуы қажет емес. EduMate жауаптарыңызды салмақты бағалайды.',
+    checkAnswer: 'Жауабымды тексеру',
+    nextQ: 'Келесі сұрақ →', seeResults: 'Нәтижелерді көру →',
+    loadingQuiz: 'Білім базасы ізделуде және сұрақтар жасалуда',
+    chooseAnotherTopic: '← Басқа тақырыпты таңдау', viewProgress: 'Үлгерімді қарау →',
+    noHistory: 'Тест тарихы жоқ',
+    noHistorySub: 'Кез келген тақырып бойынша тест тапсырыңыз, нәтижелер мұнда пайда болады.',
+    startQuizBtn: 'Тестті бастау →',
+    topicsExplored: 'Зерттелген тақырыптар', quizzesTaken: 'Тапсырылған тесттер',
+    avgScore: 'Орташа балл', bestScore: 'Үздік балл',
+    topicsSection: '📚 Тақырыптар', recentQuizzes: '🕐 Соңғы тесттер',
+    clearHistory: 'Тарихты тазалау', notTried: 'Әлі тырысылған жоқ',
+    startQuizSmall: 'Тестті бастау →', retry: 'Қайта тырысу →',
+    attempt: 'әрекет', attempts: 'әрекет',
+    verdictHigh: '✅ Керемет жауап!', verdictMid: '⚡ Ішінара дұрыс', verdictLow: '❌ Жақсартуды қажет етеді',
+    summaryHigh: 'Тамаша! 🎉', summaryMid: 'Жақсы! 💪', summaryLow: 'Жаттыға беріңіз! 📚',
+    clearConfirm: 'Тест тарихын толығымен тазалайсыз ба?',
+    yourAnswerPrefix: 'Жауабыңыз:',
+    runningLabel: 'Жалпы:',
+    secExplanation: '📖 Түсіндірме',
+    secExample: '💡 Мысал',
+    secSources: '📚 Дереккөздер',
+    secUpNext: '🚀 Келесі тақырып',
+    secFeedback: '💬 Кері байланыс',
+    secModelAnswer: '✅ Үлгі жауап',
+    questionOf: (i, tot) => `${i}/${tot} сұрақ`,
+    scoreLabel: (pts) => `Балл: ${pts}`,
+    loadingTopic: (lbl) => `${lbl} тесті жүктелуде…`,
+    runningScore: (pts) => `Жалпы: ${pts} балл`,
+  }
+};
+
+function T(key, ...args) {
+  const val = (I18N[LANG] || I18N.en)[key] || I18N.en[key] || key;
+  return typeof val === 'function' ? val(...args) : val;
+}
+
+function setLang(lang) {
+  LANG = lang;
+  document.getElementById('langEn').classList.toggle('active', lang === 'en');
+  document.getElementById('langKk').classList.toggle('active', lang === 'kk');
+  // Update all static data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
+      el.placeholder = T(key);
+    } else {
+      el.textContent = T(key);
+    }
+  });
+  // Re-render dynamic panels
+  buildExplainGrid();
+  const activeMode = document.querySelector('.tab.active')?.dataset.mode || 'explain';
+  if (activeMode === 'quiz')     buildTopicGrid();
+  if (activeMode === 'progress') renderProgress();
+}
+
+const TOPICS = [
+  { key:'machine learning',               label:'Machine Learning',    labelKk:'Машиналық оқыту', icon:'🤖',
+    sub:'Supervised · Unsupervised · RL',        subKk:'Жетекшілік · Жетекшісіз · RL',
+    q:'What is machine learning?',               qKk:'Машиналық оқыту дегеніміз не?' },
+  { key:'neural networks',                label:'Neural Networks',     labelKk:'Нейрондық желілер', icon:'🧠',
+    sub:'Deep Learning · Backprop · CNN',        subKk:'Терең оқыту · Кері таралу · CNN',
+    q:'How do neural networks work?',            qKk:'Нейрондық желілер қалай жұмыс істейді?' },
+  { key:'python programming',             label:'Python',              labelKk:'Python', icon:'🐍',
+    sub:'Syntax · OOP · Libraries',              subKk:'Синтаксис · ООП · Кітапханалар',
+    q:'What are Python fundamentals?',           qKk:'Python негіздері қандай?' },
+  { key:'algorithms and data structures', label:'Algorithms',          labelKk:'Алгоритмдер', icon:'📊',
+    sub:'Sorting · Graphs · Complexity',         subKk:'Сұрыптау · Графтар · Күрделілік',
+    q:'What are key algorithms and data structures?', qKk:'Негізгі алгоритмдер мен деректер құрылымдары қандай?' },
+  { key:'databases SQL and NoSQL',        label:'Databases',           labelKk:'Деректер қоры', icon:'🗄️',
+    sub:'SQL · NoSQL · Indexing',                subKk:'SQL · NoSQL · Индекстеу',
+    q:'How do SQL and NoSQL databases work?',    qKk:'SQL және NoSQL деректер қорлары қалай жұмыс істейді?' },
+  { key:'large language models',          label:'LLMs',                labelKk:'ҮТМ (LLM)', icon:'💬',
+    sub:'Transformers · Attention · GPT',        subKk:'Трансформерлер · Зейін · GPT',
+    q:'What are large language models?',         qKk:'Үлкен тілдік модельдер дегеніміз не?' },
+  { key:'prompt engineering',             label:'Prompt Engineering',  labelKk:'Промпт инжиниринг', icon:'✍️',
+    sub:'Chain-of-Thought · Few-shot',           subKk:'Ойлау тізбегі · Аз мысал',
+    q:'What are prompt engineering techniques?', qKk:'Промпт инженерия тәсілдері қандай?' },
+  { key:'ai agents tools rag automation', label:'AI Agents',           labelKk:'ЖИ агенттер', icon:'🦾',
+    sub:'Tools · RAG · Automation',              subKk:'Құралдар · RAG · Автоматтандыру',
+    q:'What are AI agents and how do they work?', qKk:'ЖИ агенттері дегеніміз не және олар қалай жұмыс істейді?' },
+  { key:'data science pandas charts eda', label:'Data Science',        labelKk:'Деректер ғылымы', icon:'📈',
+    sub:'Pandas · Charts · EDA',                 subKk:'Pandas · Диаграммалар · ЗТА',
+    q:'What is exploratory data analysis?',      qKk:'Зерттеушілік деректер талдауы дегеніміз не?' },
+];
+
+// ── Quiz state ──
+let qs = { topic:'', topicLabel:'', questions:[], idx:0, runningScore:0, results:[] };
+let chatBusy = false;
+
+const CASUAL_RE = /^(ok|okay|thanks|thank you|thank you!|got it|cool|great|nice|sure|alright|perfect|awesome|wonderful|excellent|understood|i see|makes sense|that helps|you're welcome|no problem|спасибо|пасиб|окей|ок|понял|понятно|ясно|отлично|хорошо|супер|класс|рақмет|рахмет|жарайды|жақсы|түсінді|түсіндім|тамаша|керемет|сау бол|сәлем|👍|🙏|😊)[!.,\s]*$/i;
+const CASUAL_REPLIES = {
+  en: [
+    "You're welcome! Feel free to ask anything else about this topic. 😊",
+    "Glad I could help! Any other questions?",
+    "Of course! Ask me anything else you'd like to know. 🎓",
+    "Happy to help! Keep the questions coming.",
+  ],
+  kk: [
+    "Өтінемін! Осы тақырып бойынша тағы сұрақ қоя аласыз. 😊",
+    "Көмектесе алғаныма қуаныштымын! Тағы сұрақтарыңыз бар ма?",
+    "Әрине! Білгіңіз келгенді сұраңыз. 🎓",
+    "Сұрақтарыңызды жалғастырыңыз!",
+  ]
+};
+function casualReply() {
+  const replies = CASUAL_REPLIES[LANG] || CASUAL_REPLIES.en;
+  return replies[Math.floor(Math.random()*replies.length)];
+}
+
+// ════════ MODE SWITCHING ════════
+function switchMode(m) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.mode === m));
+  document.getElementById('panelExplain').style.display  = m==='explain'  ? '' : 'none';
+  document.getElementById('panelQuiz').style.display     = m==='quiz'     ? '' : 'none';
+  document.getElementById('panelProgress').style.display = m==='progress' ? '' : 'none';
+  hideError();
+  if (m === 'explain')  buildExplainGrid();
+  if (m === 'quiz')     buildTopicGrid();
+  if (m === 'progress') renderProgress();
+}
+
+// ════════ EXPLAIN CHAT ════════
+function buildExplainGrid() {
+  const grid = document.getElementById('explainTopicGrid');
+  grid.innerHTML = TOPICS.map(t => {
+    const lbl = (LANG === 'kk' && t.labelKk) ? t.labelKk : t.label;
+    const sub = (LANG === 'kk' && t.subKk)   ? t.subKk   : t.sub;
+    const q   = (LANG === 'kk' && t.qKk)     ? t.qKk     : t.q;
+    return `<button class="topic-card" onclick="openChat('${t.icon}','${encodeQuote(lbl)}','${encodeQuote(q)}')">
+      <span class="t-icon">${t.icon}</span>
+      <span class="t-name">${lbl}</span>
+      <span class="t-sub">${sub}</span>
+    </button>`;
+  }).join('');
+}
+
+function openChat(icon, label, defaultQ) {
+  document.getElementById('chatTopicIcon').textContent  = icon;
+  document.getElementById('chatTopicLabel').textContent = label;
+  document.getElementById('chatMessages').innerHTML = '';
+  document.getElementById('chatInput').value = defaultQ;
+  chatBusy = false;
+  hideError();
+  document.getElementById('explainTopics').style.display = 'none';
+  document.getElementById('explainChat').style.display   = '';
+  const ta = document.getElementById('chatInput');
+  ta.focus();
+  ta.setSelectionRange(0, ta.value.length);
+}
+
+async function sendChatMessage() {
+  const question = document.getElementById('chatInput').value.trim();
+  if (!question || chatBusy) return;
+  hideError();
+
+  // Append user bubble
+  appendUserMsg(question);
+  document.getElementById('chatInput').value = '';
+
+  // Casual phrase — no API call needed
+  if (CASUAL_RE.test(question)) {
+    appendSimpleReply(casualReply());
+    document.getElementById('chatInput').focus();
+    return;
+  }
+
+  // Show typing indicator
+  const loadingId = 'ld-' + Date.now();
+  appendLoading(loadingId);
+  setChatBusy(true);
+
+  try {
+    const data = await post({ question, mode: 'explain' });
+    removeEl(loadingId);
+    if (data.status === 'rejected') {
+      appendErrorMsg('🚫 ' + (data.message || 'Request blocked.'));
+    } else {
+      appendAIResponse(data);
+    }
+  } catch(e) {
+    removeEl(loadingId);
+    appendErrorMsg('Could not reach EduMate API. Please try again.');
+  } finally {
+    setChatBusy(false);
+    document.getElementById('chatInput').focus();
+  }
+}
+
+function appendUserMsg(text) {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg-user fade-in';
+  div.textContent = text;
+  msgs.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function appendLoading(id) {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.id = id;
+  div.className = 'msg-loading fade-in';
+  div.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
+  msgs.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function appendAIResponse(data) {
+  const a = data.answer || {};
+  let h = '';
+  h += sec(T('secExplanation'), `<p class="explain-text">${x(a.explanation)}</p>`);
+  if (a.example)       h += sec(T('secExample'),  `<div class="example-box">${x(a.example)}</div>`);
+  if (a.sources?.length) h += sec(T('secSources'), `<div class="sources">${a.sources.map(s=>`<span class="chip">${x(s)}</span>`).join('')}</div>`);
+  if (data.recommendation) h += sec(T('secUpNext'), `<div class="rec-box"><span style="font-size:1.2rem;flex-shrink:0">💡</span><span>${x(data.recommendation)}</span></div>`);
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg-ai fade-in';
+  div.innerHTML = `<div class="ai-bubble">${h}</div>`;
+  msgs.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function appendSimpleReply(text) {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg-ai fade-in';
+  div.innerHTML = `<div class="ai-bubble" style="padding:14px 20px"><p class="explain-text">${x(text)}</p></div>`;
+  msgs.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function appendErrorMsg(text) {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'fade-in';
+  div.innerHTML = `<div style="background:#FEF2F2;border:1.5px solid #FECACA;border-radius:13px;padding:12px 16px;color:#991B1B;font-size:0.88rem;line-height:1.6">${x(text)}</div>`;
+  msgs.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function setChatBusy(on) {
+  chatBusy = on;
+  const btn = document.getElementById('chatSendBtn');
+  btn.disabled = on;
+  document.getElementById('chatSendText').style.display   = on ? 'none' : '';
+  document.getElementById('chatSendIcon').style.display   = on ? 'none' : '';
+  document.getElementById('chatSendSpinner').classList.toggle('on', on);
+}
+
+function removeEl(id) { document.getElementById(id)?.remove(); }
+
+function resetExplain() {
+  document.getElementById('explainChat').style.display   = 'none';
+  document.getElementById('explainTopics').style.display = '';
+  hideError();
+}
+
+// ════════ QUIZ ════════
+function buildTopicGrid() {
+  const history = getProgress();
+  const bestByTopic = {};
+  history.forEach(r => { if (!bestByTopic[r.topic] || r.score > bestByTopic[r.topic]) bestByTopic[r.topic] = r.score; });
+  const grid = document.getElementById('topicGrid');
+  grid.innerHTML = TOPICS.map(t => {
+    const best = bestByTopic[t.key];
+    const badge = best != null ? `<span class="t-score-badge">${best}/300</span>` : '';
+    const lbl = (LANG === 'kk' && t.labelKk) ? t.labelKk : t.label;
+    const sub = (LANG === 'kk' && t.subKk)   ? t.subKk   : t.sub;
+    const q   = (LANG === 'kk' && t.qKk)     ? t.qKk     : t.q;
+    return `<button class="topic-card" onclick="startQuiz('${t.key}','${encodeQuote(lbl)}','${encodeQuote(q)}')">
+      ${badge}
+      <span class="t-icon">${t.icon}</span>
+      <span class="t-name">${lbl}</span>
+      <span class="t-sub">${sub}</span>
+    </button>`;
+  }).join('');
+}
+
+async function startQuiz(topicKey, topicLabel, question) {
+  qs = { topic:topicKey, topicLabel, questions:[], idx:0, runningScore:0, results:[] };
+  showQuizPhase('quizLoading');
+  document.getElementById('quizLoadingTopic').textContent = T('loadingTopic', topicLabel);
+  try {
+    const data = await post({ question, mode:'quiz', topic: qs.topicLabel });
+    if (!data.quiz?.length) throw new Error('No questions');
+    qs.questions = data.quiz.slice(0,3);
+    showQuizPhase('quizQuestion');
+    renderQuestion();
+  } catch(e) {
+    showQuizPhase('quizTopics');
+    showError('Failed to load quiz. Please try again.');
+  }
+}
+
+function renderQuestion() {
+  const total = qs.questions.length, idx = qs.idx;
+  document.getElementById('qProgressLabel').textContent = T('questionOf', idx+1, total);
+  document.getElementById('qScoreLabel').textContent    = T('scoreLabel', qs.runningScore);
+  document.getElementById('qProgressFill').style.width  = (idx/total*100)+'%';
+  document.getElementById('qTopicBadge').textContent    = qs.topicLabel;
+  document.getElementById('qText').textContent          = qs.questions[idx].question;
+  document.getElementById('qAnswer').value = '';
+  document.getElementById('qAnswer').focus();
+  document.getElementById('quizQuestion').classList.add('fade-in');
+}
+
+async function submitAnswer() {
+  const ans = val('qAnswer');
+  if (!ans) { showError(LANG==='kk'?'Алдымен жауабыңызды жазыңыз.':'Please write your answer first.'); return; }
+  hideError();
+  setLoading('qSubmitBtn','qSubmitText','qSpinner', true);
+  const q = qs.questions[qs.idx];
+  try {
+    const data = await post({ question:q.question, mode:'evaluate', student_answer:ans, topic:qs.topicLabel, running_score:qs.runningScore });
+    const a = data.evaluation || {};
+    const score = a.score ?? 0;
+    qs.runningScore += score;
+    qs.results.push({ question:q.question, userAnswer:ans, score, feedback:a.feedback||'', correctAnswer:a.correct_answer||q.answer||'' });
+    showQuizPhase('quizQResult');
+    renderQResult(a, score);
+  } catch(e) { showError('Could not evaluate answer. Please try again.'); }
+  finally { setLoading('qSubmitBtn','qSubmitText','qSpinner', false, T('checkAnswer')); }
+}
+
+function renderQResult(a, score) {
+  const isLast = qs.idx+1 >= qs.questions.length;
+  const cls = score>=80?'high':score>=50?'mid':'low';
+  const verdict = score>=80?T('verdictHigh'):score>=50?T('verdictMid'):T('verdictLow');
+  let h = `<div class="sec"><div class="score-wrap">
+    <div class="score-ring ${cls}">${score}<span class="pts">pts</span></div>
+    <div><div class="score-verdict">${verdict}</div>
+    <div class="score-sub">Q${qs.idx+1}/${qs.questions.length} · ${T('runningLabel')} <strong>${qs.runningScore} pts</strong></div></div>
+  </div></div>`;
+  if (a.feedback)       h += `<div class="sec">${secTitle(T('secFeedback'))}<div class="feedback-box">${x(a.feedback)}</div></div>`;
+  if (a.correct_answer) h += `<div class="sec">${secTitle(T('secModelAnswer'))}<div class="correct-box">${x(a.correct_answer)}</div></div>`;
+  document.getElementById('qResultContent').innerHTML = h;
+  document.getElementById('qNextText').textContent = isLast ? T('seeResults') : T('nextQ');
+  document.getElementById('quizQResult').classList.add('fade-in');
+}
+
+function nextQuestion() {
+  qs.idx++;
+  if (qs.idx >= qs.questions.length) showSummary();
+  else { showQuizPhase('quizQuestion'); renderQuestion(); }
+}
+
+function showSummary() {
+  saveQuizResult();
+  const total = qs.runningScore, max = qs.questions.length*100;
+  const pct = total/max;
+  const cls = pct>=0.8?'high':pct>=0.5?'mid':'low';
+  const titles = pct>=0.8?T('summaryHigh'):pct>=0.5?T('summaryMid'):T('summaryLow');
+  document.getElementById('summaryScoreNum').textContent = total;
+  document.getElementById('summaryRing').className = `summary-ring ${cls}`;
+  document.getElementById('summaryTitle').textContent = titles;
+  document.getElementById('summarySub').textContent = `${total} / ${max} pts · ${qs.topicLabel}`;
+  const bd = qs.results.map((r,i)=>{
+    const c=r.score>=80?'pass':r.score>=50?'mid':'fail';
+    const sc=r.score>=80?'high':r.score>=50?'mid':'low';
+    return `<div class="bd-item ${c}">
+      <div class="bd-q">Q${i+1}: ${x(r.question)}</div>
+      <div class="bd-meta"><span class="bd-score ${sc}">${r.score} pts</span></div>
+      <div class="bd-ans">${T('yourAnswerPrefix')} ${x(r.userAnswer.slice(0,120))}${r.userAnswer.length>120?'…':''}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('summaryBreakdown').innerHTML = bd;
+  showQuizPhase('quizSummary');
+  document.getElementById('quizSummary').classList.add('fade-in');
+}
+
+function resetQuiz() { showQuizPhase('quizTopics'); buildTopicGrid(); hideError(); }
+
+function showQuizPhase(id) {
+  ['quizTopics','quizLoading','quizQuestion','quizQResult','quizSummary'].forEach(p => {
+    document.getElementById(p).style.display = p===id ? '' : 'none';
+  });
+}
+
+// ════════ PROGRESS ════════
+function renderProgress() {
+  const history = getProgress();
+  const panel = document.getElementById('panelProgress');
+  if (!history.length) {
+    panel.innerHTML = `<div class="card"><div class="prog-empty">
+      <div class="empty-icon">📊</div>
+      <h3>${T('noHistory')}</h3>
+      <p>${T('noHistorySub')}</p>
+      <button class="btn btn-primary" style="width:auto;padding:13px 28px" onclick="switchMode('quiz')">${T('startQuizBtn')}</button>
+    </div></div>`;
+    return;
+  }
+  const uniqueTopics = [...new Set(history.map(r=>r.topic))].length;
+  const avgScore = Math.round(history.reduce((s,r)=>s+r.score,0)/history.length);
+  const bestScore = Math.max(...history.map(r=>r.score));
+  const totalQuizzes = history.length;
+  const bestByTopic = {}, attemptsByTopic = {};
+  history.forEach(r => {
+    if (!bestByTopic[r.topic] || r.score > bestByTopic[r.topic]) bestByTopic[r.topic] = r.score;
+    attemptsByTopic[r.topic] = (attemptsByTopic[r.topic]||0) + 1;
+  });
+  const topicCards = TOPICS.map(t => {
+    const best = bestByTopic[t.key];
+    const attempts = attemptsByTopic[t.key] || 0;
+    const lbl = (LANG === 'kk' && t.labelKk) ? t.labelKk : t.label;
+    if (best == null) {
+      return `<div class="prog-topic-card untried">
+        <div class="ptc-header"><span class="ptc-icon">${t.icon}</span><span class="ptc-name">${lbl}</span></div>
+        <div class="ptc-bar"><div class="ptc-bar-fill" style="width:0%"></div></div>
+        <div class="ptc-untried">${T('notTried')}</div>
+        <button class="ptc-quiz-btn" onclick="switchMode('quiz')">${T('startQuizSmall')}</button>
+      </div>`;
+    }
+    const pct = Math.round(best/3);
+    const sc = best>=240?'high':best>=150?'mid':'low';
+    return `<div class="prog-topic-card done">
+      <div class="ptc-header"><span class="ptc-icon">${t.icon}</span><span class="ptc-name">${lbl}</span></div>
+      <div class="ptc-bar-wrap"><div class="ptc-bar"><div class="ptc-bar-fill ${sc}" style="width:${pct}%"></div></div></div>
+      <div class="ptc-meta">
+        <span class="ptc-score ${sc}">${best}/300</span>
+        <span class="ptc-attempts">${attempts} ${attempts>1?T('attempts'):T('attempt')}</span>
+      </div>
+      <button class="ptc-quiz-btn" onclick="switchMode('quiz')">${T('retry')}</button>
+    </div>`;
+  }).join('');
+  const histItems = history.slice(0,10).map(r => {
+    const t = TOPICS.find(t=>t.key===r.topic) || { icon:'📝', label: capitalize(r.topic), labelKk: capitalize(r.topic) };
+    const tLbl = (LANG === 'kk' && t.labelKk) ? t.labelKk : t.label;
+    const sc = r.score>=240?'high':r.score>=150?'mid':'low';
+    const date = new Date(r.date).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div class="hist-item">
+      <span class="hist-icon">${t.icon}</span>
+      <div class="hist-info"><div class="hist-topic">${tLbl}</div><div class="hist-date">${date}</div></div>
+      <span class="hist-score ${sc}">${r.score}/300</span>
+    </div>`;
+  }).join('');
+  panel.innerHTML = `
+    <div class="stats-grid fade-in">
+      <div class="stat-card"><div class="stat-num">${uniqueTopics}<span style="font-size:1rem;color:var(--muted)">/7</span></div><div class="stat-label">${T('topicsExplored')}</div></div>
+      <div class="stat-card"><div class="stat-num">${totalQuizzes}</div><div class="stat-label">${T('quizzesTaken')}</div></div>
+      <div class="stat-card"><div class="stat-num">${avgScore}<span style="font-size:1rem;color:var(--muted)">/300</span></div><div class="stat-label">${T('avgScore')}</div></div>
+      <div class="stat-card"><div class="stat-num">${bestScore}<span style="font-size:1rem;color:var(--muted)">/300</span></div><div class="stat-label">${T('bestScore')}</div></div>
+    </div>
+    <div class="fade-in" style="animation-delay:0.05s">
+      <div class="prog-section-title">${T('topicsSection')}</div>
+      <div class="prog-topic-grid">${topicCards}</div>
+    </div>
+    <div class="prog-history fade-in" style="animation-delay:0.1s">
+      <div class="prog-section-title" style="margin-bottom:16px">${T('recentQuizzes')}</div>
+      ${histItems}
+      <div class="hist-clear"><button class="btn-ghost btn" onclick="clearProgress()">${T('clearHistory')}</button></div>
+    </div>`;
+}
+
+// ════════ LOCALSTORAGE ════════
+function saveQuizResult() {
+  const history = getProgress();
+  history.unshift({ topic: qs.topic, score: qs.runningScore, max: qs.questions.length*100, date: new Date().toISOString() });
+  if (history.length > 50) history.pop();
+  localStorage.setItem(LS_KEY, JSON.stringify(history));
+}
+function getProgress() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; }
+}
+function clearProgress() {
+  if (confirm(T('clearConfirm'))) { localStorage.removeItem(LS_KEY); renderProgress(); }
+}
+
+// ════════ HELPERS ════════
+async function post(body) {
+  const r = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  return r.json();
+}
+function val(id) { return document.getElementById(id).value.trim(); }
+function setLoading(btnId, textId, spinnerId, on, offLabel) {
+  document.getElementById(btnId).disabled = on;
+  document.getElementById(spinnerId).classList.toggle('on', on);
+  if (!on && offLabel) document.getElementById(textId).textContent = offLabel;
+  document.getElementById(textId).style.opacity = on ? '0.5' : '1';
+}
+function showError(msg) { document.getElementById('errorText').textContent=msg; document.getElementById('errorBox').classList.add('on'); }
+function hideError() { document.getElementById('errorBox').classList.remove('on'); }
+function sec(title, body) { return `<div class="sec"><div class="sec-title">${title}</div>${body}</div>`; }
+function secTitle(t) { return `<div class="sec-title">${t}</div>`; }
+function x(s) { if(s==null)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function capitalize(s) { return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
+function encodeQuote(s) { return s.replace(/'/g,"\\'"); }
+
+// Init
+buildExplainGrid();
+
+// Ctrl+Enter
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey||e.metaKey) || e.key!=='Enter') return;
+  if (document.getElementById('explainChat').style.display !== 'none') { sendChatMessage(); return; }
+  if (document.getElementById('quizQuestion').style.display !== 'none') { submitAnswer(); }
+});
+</script>
+</body>
+</html>
