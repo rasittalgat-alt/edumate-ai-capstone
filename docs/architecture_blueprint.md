@@ -65,7 +65,7 @@ User / Browser (index.html)
 |---|---|
 | Build_Prompt | Constructs mode-specific prompt with injected RAG context |
 | AI Agent (LangChain) | System prompt enforces raw JSON output only |
-| Google Gemini Chat Model | `gemini-2.0-flash`, temperature 0.7 |
+| Google Gemini Chat Model | `gemini-2.5-flash`, temperature 0.7 |
 | Brave_Search_MCP | MCP Client Tool v1.2 — HTTP Streamable transport to `http://172.17.0.1:3100/mcp` |
 | Parse_Output | Strips markdown fences, parses JSON; fallback on error |
 
@@ -138,7 +138,7 @@ EduMate_RAG_Knowledge_Base.docx
 |---|---|---|
 | Frontend | Vanilla HTML/CSS/JS | Zero dependencies, 3-language UI (EN/RU/KK) |
 | Orchestration | n8n (self-hosted Docker) | Visual agent pipeline, execution logs |
-| LLM | Gemini Flash 2.0 | Fast, structured JSON output |
+| LLM | Gemini Flash 2.5 | Fast, structured JSON output |
 | Embedding | Gemini Embedding-001 (768-dim) | Same provider, consistent latency |
 | Vector DB | Pinecone | Managed, serverless, instant RAG |
 | Progress | Google Sheets | Human-readable, zero infrastructure |

@@ -35,7 +35,7 @@ The frontend (`index.html`) is a zero-dependency single-page app supporting Engl
 | Decision | Choice | Rationale |
 |---|---|---|
 | Orchestration | n8n | Visual pipelines, execution logs, no backend server needed |
-| LLM | Gemini Flash 2.0 | Fast, enforces raw JSON output, cost-effective |
+| LLM | Gemini Flash 2.5 | Fast, enforces raw JSON output, cost-effective |
 | Embedding | Gemini Embedding-001 | Same API provider, 768-dim, consistent quality |
 | Vector DB | Pinecone | Managed, serverless, instant semantic search |
 | Knowledge Base | DOCX → chunked (200w/50w overlap) | ~36 vectors for better RAG precision than 9 flat docs |

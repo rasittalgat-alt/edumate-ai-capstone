@@ -45,7 +45,7 @@ EduMate_AI_Orchestrator
 |---|---|
 | Frontend | Vanilla HTML/CSS/JS (`index.html`) |
 | Orchestration | n8n (self-hosted) |
-| LLM | Google Gemini Flash (`gemini-2.0-flash`) |
+| LLM | Google Gemini Flash (`gemini-2.5-flash`) |
 | Embedding | Google Gemini Embedding-001 (768-dim) |
 | Vector Database | Pinecone (namespace: `edumate_kb`) |
 | Knowledge Base | `data/raw/EduMate_RAG_Knowledge_Base.docx` → chunked (200w / 50w overlap) |
