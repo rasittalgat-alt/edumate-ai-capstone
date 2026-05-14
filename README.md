@@ -168,7 +168,14 @@ curl -X POST https://n8n.sheshimai.cloud/webhook/edumate-ai \
   -d @tests/adversarial_prompt_injection.json
 ```
 
-See `tests/` for all 6 test scenarios.
+| Test file | Type | Expected result |
+|---|---|---|
+| `positive_explain.json` | Positive | 200 — explanation + quiz |
+| `positive_quiz.json` | Positive | 200 — 3 quiz questions |
+| `positive_evaluate.json` | Positive | 200 — score + feedback |
+| `negative_empty_question.json` | Negative | 400 — `empty_question` |
+| `adversarial_prompt_injection.json` | Negative | 400 — `injection_attempt` |
+| `edge_case_mcp_fallback.json` | Edge case | 200 — topic not in KB, MCP Brave Search fills the gap |
 
 ---
 
@@ -195,7 +202,7 @@ edumate-ai-capstone/
 │   ├── positive_quiz.json
 │   ├── positive_evaluate.json
 │   ├── negative_empty_question.json
-│   ├── negative_unknown_topic.json
+│   ├── edge_case_mcp_fallback.json
 │   └── adversarial_prompt_injection.json
 └── workflows/              # 4 n8n workflow JSONs
     ├── edumate_ai_orchestrator.json  # Orchestrator
