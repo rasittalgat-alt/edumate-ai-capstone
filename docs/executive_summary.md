@@ -63,14 +63,39 @@ The frontend (`index.html`) is a zero-dependency single-page app supporting Engl
 
 ---
 
-## Results
+## Results & Business Value
 
+### Technical Results
 - **9 topics** available (ML, Neural Networks, Python, Algorithms, Databases, LLMs, Prompt Engineering, AI Agents, Data Science)
 - **3 interaction modes**: explain, quiz, evaluate
 - **~36 Pinecone vectors** (chunked for higher retrieval precision)
 - **Score tracking**: individual score (0–100) + cumulative session score
 - **Safety**: 8 injection patterns blocked before any LLM call
 - **Multilingual UI**: English, Russian, Kazakh
+- **MCP web search**: real-time Brave Search fallback when knowledge base is insufficient
+
+### Business Value
+- **Accessibility**: any student with a browser can get personalized AI tutoring at zero cost — no subscription, no app install, no account required
+- **Grounded answers**: RAG over a curated knowledge base eliminates hallucinations on in-scope topics; Brave Search MCP handles out-of-scope queries with live web data
+- **Scalability**: the n8n pipeline handles concurrent users without infrastructure changes; Pinecone and Google Sheets scale automatically
+- **Multilingual reach**: English, Russian, and Kazakh UI serves diverse student populations without separate deployments
+- **Auditability**: every interaction is logged to Google Sheets with topic, score, and timestamp — instructors can track student progress without any additional tooling
+- **Cost**: the entire stack runs on free tiers (Pinecone, Google Sheets, Gemini API free quota, GitHub Pages) — operational cost is effectively zero for a student-scale deployment
+
+---
+
+## Lessons Learned & Next Steps
+
+### Lessons Learned
+- **Visual orchestration accelerates debugging**: n8n's per-node execution logs made multi-agent failures immediately traceable without additional instrumentation
+- **Chunking matters more than model choice**: switching from whole-document to 200-word chunked RAG improved answer grounding more than any prompt tuning
+- **MCP transport requires careful matching**: the main integration challenge was aligning n8n's HTTP Streamable expectation with the stdio-based Brave Search server — solved via supergateway
+
+### Potential Next Steps
+- Add streaming responses to eliminate the 3–5 sec wait
+- Implement session memory so the Tutor Agent can conduct multi-turn learning dialogues
+- Add user authentication for persistent cross-device progress tracking
+- Expand the knowledge base to cover more CS topics
 
 ---
 
@@ -89,11 +114,12 @@ The frontend (`index.html`) is a zero-dependency single-page app supporting Engl
 
 | File | Purpose |
 |---|---|
-| `index.html` | Frontend UI |
-| `run_ingestion.py` | Knowledge base ingestion |
-| `EduMate_RAG_Knowledge_Base.docx` | Source educational content |
+| `index.html` | Frontend UI (EN / RU / KK) |
+| `run_ingestion.py` | Knowledge base ingestion entry point |
+| `data/raw/EduMate_RAG_Knowledge_Base.docx` | Source educational content |
+| `data/processed/chunks.json` | 36 chunked knowledge base vectors |
 | `workflows/` | 4 n8n agent workflow JSONs |
 | `app/` | Python utility layer (config, safety, RAG, logging) |
 | `tests/` | 6 test payload JSONs |
-| `data/` | Raw topics + processed test cases |
-| `architecture_blueprint.md` | Full technical architecture |
+| `docs/architecture_blueprint.md` | Full technical architecture |
+| `docs/self_review.md` | Architectural decisions and trade-offs |
