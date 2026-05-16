@@ -183,7 +183,7 @@ curl -X POST https://n8n.sheshimai.cloud/webhook/edumate-ai \
 
 ```
 edumate-ai-capstone/
-├── index.html              # Frontend UI (EN / RU / KK)
+├── index.html              # Frontend UI (EN / KK)
 ├── run_ingestion.py        # KB ingestion entry point
 ├── requirements.txt
 ├── .env.example

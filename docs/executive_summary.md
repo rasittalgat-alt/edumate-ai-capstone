@@ -26,7 +26,7 @@ EduMate is a 4-agent pipeline orchestrated by n8n:
 3. **Tutor Agent** uses Gemini Flash to generate explanations, quizzes, or evaluations grounded in RAG context
 4. **Progress Agent** logs every interaction to Google Sheets with scores and topic tracking
 
-The frontend (`index.html`) is a zero-dependency single-page app supporting English, Russian, and Kazakh.
+The frontend (`index.html`) is a zero-dependency single-page app supporting English and Kazakh.
 
 ---
 
@@ -41,7 +41,7 @@ The frontend (`index.html`) is a zero-dependency single-page app supporting Engl
 | Knowledge Base | DOCX → chunked (200w/50w overlap) | ~36 vectors for better RAG precision than 9 flat docs |
 | MCP tool | Brave Search via supergateway | Real-time web search in Tutor Agent when KB is insufficient; explicit MCP protocol |
 | Progress | Google Sheets | Human-readable, shareable, zero infrastructure |
-| Frontend | Vanilla HTML/JS | No build step, works offline, 3-language UI |
+| Frontend | Vanilla HTML/JS | No build step, works offline, bilingual UI (EN/KK) |
 
 ---
 
@@ -71,14 +71,14 @@ The frontend (`index.html`) is a zero-dependency single-page app supporting Engl
 - **~36 Pinecone vectors** (chunked for higher retrieval precision)
 - **Score tracking**: individual score (0–100) + cumulative session score
 - **Safety**: 8 injection patterns blocked before any LLM call
-- **Multilingual UI**: English, Russian, Kazakh
+- **Multilingual UI**: English, Kazakh
 - **MCP web search**: real-time Brave Search fallback when knowledge base is insufficient
 
 ### Business Value
 - **Accessibility**: any student with a browser can get personalized AI tutoring at zero cost — no subscription, no app install, no account required
 - **Grounded answers**: RAG over a curated knowledge base eliminates hallucinations on in-scope topics; Brave Search MCP handles out-of-scope queries with live web data
 - **Scalability**: the n8n pipeline handles concurrent users without infrastructure changes; Pinecone and Google Sheets scale automatically
-- **Multilingual reach**: English, Russian, and Kazakh UI serves diverse student populations without separate deployments
+- **Multilingual reach**: English and Kazakh UI serves diverse student populations without separate deployments
 - **Auditability**: every interaction is logged to Google Sheets with topic, score, and timestamp — instructors can track student progress without any additional tooling
 - **Cost**: the entire stack runs on free tiers (Pinecone, Google Sheets, Gemini API free quota, GitHub Pages) — operational cost is effectively zero for a student-scale deployment
 
@@ -114,7 +114,7 @@ The frontend (`index.html`) is a zero-dependency single-page app supporting Engl
 
 | File | Purpose |
 |---|---|
-| `index.html` | Frontend UI (EN / RU / KK) |
+| `index.html` | Frontend UI (EN / KK) |
 | `run_ingestion.py` | Knowledge base ingestion entry point |
 | `data/raw/EduMate_RAG_Knowledge_Base.docx` | Source educational content |
 | `data/processed/chunks.json` | 36 chunked knowledge base vectors |

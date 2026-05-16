@@ -136,7 +136,7 @@ EduMate_RAG_Knowledge_Base.docx
 
 | Layer | Technology | Why |
 |---|---|---|
-| Frontend | Vanilla HTML/CSS/JS | Zero dependencies, 3-language UI (EN/RU/KK) |
+| Frontend | Vanilla HTML/CSS/JS | Zero dependencies, bilingual UI (EN/KK) |
 | Orchestration | n8n (self-hosted Docker) | Visual agent pipeline, execution logs |
 | LLM | Gemini Flash 2.5 | Fast, structured JSON output |
 | Embedding | Gemini Embedding-001 (768-dim) | Same provider, consistent latency |
@@ -204,7 +204,7 @@ n8n's `executeWorkflow` node passes the **full accumulated JSON** to each child 
 ## 9. Frontend (index.html)
 
 - **Modes:** Explain, Quiz, Evaluate
-- **Languages:** English, Russian, Kazakh (switched in real time)
+- **Languages:** English, Kazakh (switched in real time)
 - **Progress tracking:** `localStorage` key `edumate_progress_v2`
 - **API:** `fetch()` POST to n8n webhook, handles JSON response
 - **Quiz state:** `qs.runningScore` accumulates across 3 questions → sent as `running_score` to backend
